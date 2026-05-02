@@ -1,0 +1,6 @@
+pandas
+plotly
+scapy
+streamlit
+statsmodels
+rich
