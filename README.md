@@ -49,6 +49,75 @@ FincaDiag_Modular/
 └─ requirements.txt
 ```
 
+## probe_forense — Instrumento de captura en Raspberry Pi 5
+
+La carpeta `probe_forense/` contiene los dos scripts que corren de forma autónoma en la
+Raspberry Pi 5 instalada en la finca. No requieren intervención manual una vez configurados.
+
+### Scripts
+
+| Script | Rol |
+|--------|-----|
+| `FincaScheduler.py` | Orquestador: detecta el bloque activo del timeline y lanza `FincaDiag.py` en el modo correcto |
+| `FincaDiag.py` | Ejecutor: captura serial, PCAP, Antena UDP o baseline según el modo recibido |
+
+### Timeline diario (9 bloques)
+
+El scheduler conoce el horario real de la finca y opera sin configuración adicional:
+
+```
+02:15  ORDEÑO AM  → Baseline + Serial + Antena UDP + PCAP (1h20) + Baseline
+04:34  NORMAL 1   → Baseline + Antena UDP (1h) + PCAP (1h) + Baseline
+07:23  NORMAL 2   → ...
+10:12  NORMAL 3   → ...
+13:00  ORDEÑO PM  → Baseline + Serial + Antena UDP + PCAP (1h20) + Baseline
+15:10  NORMAL 4   → ...
+17:48  NORMAL 5   → ...
+20:37  NORMAL 6   → ...
+23:26  NORMAL 7   → ...
+```
+
+Bloques **ORDEÑO**: captura serial + red completa — son las sesiones de análisis principal.
+Bloques **NORMAL**: solo telemetría de red — monitoreo continuo entre ordeños.
+
+### Modos de FincaDiag.py
+
+| Modo | Descripcion |
+|------|-------------|
+| `-m 1` | Antena UDP + PCAP filtrado puerto 6001 |
+| `-m 2` | Serial + PCAP completo (bloques ordeño) |
+| `-m 3` | Solo PCAP completo (bloques normales) |
+| `-m 4` | Baseline de red |
+| `-m 5` | Serial + Antena UDP + PCAP en paralelo |
+
+### Ejecución en Raspberry Pi
+
+El scheduler se invoca via cron cada minuto. Si el minuto actual cae dentro de un bloque
+activo, ejecuta las fases pendientes; si cae en período de descanso, no hace nada.
+
+```bash
+# Entrada en crontab (crontab -e)
+* * * * * /usr/bin/python3 /home/esmeralda/probe_forense/FincaScheduler.py
+```
+
+El scheduler es resiliente a reinicios: guarda el estado del bloque en
+`/home/esmeralda/FincaLogs/fincadiag_scheduler_state.json` y retoma desde donde se
+interrumpió si detecta que el bloque todavía está activo.
+
+Salidas generadas en `/home/esmeralda/FincaLogs/`:
+
+```
+ordeño_pm_20260512_1300/
+  Baseline_20260512_130000/
+  Captura_20260512_130500/
+    serial_hex.txt
+    captura.pcap
+    antena_udp.txt
+  Baseline_20260512_145500/
+```
+
+---
+
 ## Requisitos de entorno
 
 - Python 3.12 o superior
