@@ -36,6 +36,80 @@ FincaDiag_Modular/
 └─ requirements.txt
 ```
 
+## Requisitos de entorno
+
+- Python 3.12 o superior
+- Dependencias: `pip install -r requirements.txt`
+- El proyecto usa un layout `src/`, por lo que se requiere `PYTHONPATH=src` para ejecutar
+  cualquier modulo directamente:
+
+```powershell
+$env:PYTHONPATH = "src"
+```
+
+---
+
+## Pipeline completo (end-to-end)
+
+Este es el flujo operativo completo del sistema, desde la captura en campo hasta la
+publicacion de telemetria normalizada al broker:
+
+```
+[Raspberry Pi en finca]          [Windows / estacion de analisis]        [Raspberry Pi - broker]
+        |                                      |                                    |
+ Captura automatica                            |                                    |
+ serial_hex.txt                                |                                    |
+ captura.pcap                                  |                                    |
+ antena_udp.txt                                |                                    |
+        |                                      |                                    |
+        |--- SCP / WinSCP transfer ----------->|                                    |
+        |                              python main.py --root <visita>               |
+        |                              (motor: parser + correlacion + alertas)      |
+        |                                      |                                    |
+        |                              data/processed/visits/                       |
+        |                              Visita_DD_MM_YYYY/sesiones/...               |
+        |                                      |                                    |
+        |<-- SCP / WinSCP transfer ------------|                                    |
+        |  /var/lib/fincadiag/processed/       |                                    |
+        |                                      |                                    |
+ run_gateway.sh                                |                                    |
+ python -m fincadiag.gateway.runtime           |                                    |
+        |                                      |                                    |
+        |--- MQTT/TLS publish ----------------------------------------------->|      |
+                                                                     broker:8883    |
+```
+
+### Pasos detallados
+
+1. **Captura en campo (Raspberry Pi)**
+   La Raspberry captura automaticamente por cron en `/home/esmeralda/FincaLogs/`.
+   Cada sesion genera una carpeta `Captura_YYYYMMDD_HHMMSS/` con los archivos de evidencia.
+
+2. **Transferencia a Windows**
+   ```powershell
+   scp -r esmeralda@<ip>:/home/esmeralda/FincaLogs/Visita_* C:\PROYECTO_TFG\Prueba_Finca\
+   ```
+
+3. **Procesamiento con el motor**
+   ```powershell
+   $env:PYTHONPATH = "src"
+   python main.py --root "C:\PROYECTO_TFG\Prueba_Finca\Visita_DD_MM_YYYY"
+   ```
+   Salida: `data/processed/visits/Visita_DD_MM_YYYY/`
+
+4. **Transferencia de sesion procesada a Raspberry**
+   ```powershell
+   scp -r "data\processed\visits\Visita_DD_MM_YYYY" esmeralda@<ip>:/var/lib/fincadiag/processed/
+   ```
+
+5. **Publicacion al broker MQTT/TLS**
+   ```bash
+   /home/esmeralda/run_gateway.sh
+   ```
+   Resultado esperado: `published=N spooled=0 failed=0`
+
+---
+
 ## Flujo recomendado
 
 No necesitas copiar tus logs a mano si ya los tienes organizados por visita, toma y hora.
