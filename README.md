@@ -123,7 +123,7 @@ publicacion de telemetria normalizada al broker:
 
 ---
 
-## probe_forense — Instrumento de captura en Raspberry Pi 5
+## Probe Forense — Instrumento de captura en Raspberry Pi 5
 
 La carpeta `probe_forense/` contiene los dos scripts que corren de forma autónoma en la
 Raspberry Pi 5 instalada en la finca. No requieren intervención manual una vez configurados.
