@@ -32,7 +32,7 @@ from fincadiag.config import (
     DEFAULT_WINDOW_MS,
     REPORTS_DIR,
 )
-from fincadiag.export.report_builder import generate_reports
+from fincadiag.export.report_builder import build_executive_summary, build_gateway_expectations, generate_reports
 from fincadiag.ingest.discover import (
     discover_baseline_only_sessions,
     discover_sessions,
@@ -61,6 +61,9 @@ REQUIRED_VISIT_COLS = [
 ]
 
 CORRELACION_COLS = {
+    "visit_name": "nombre de la visita origen",
+    "sample_id": "identificador de la sesion origen",
+    "block_label": "bloque operativo de la sesion",
     "timestamp_serial": "HH:MM:SS.mmm del evento serial",
     "delta_ms": "red_ms - serial_ms, puede ser negativo",
     "serial_event": "tipo de evento (fotocelda_activa, rfid_leido, etc.)",
@@ -487,6 +490,73 @@ def aggregate_pcap_alerts(rows: list[dict]) -> list[dict]:
     return ordered
 
 
+def collect_top_alerts_with_evidence(
+    rows: list[dict],
+    severities: tuple[str, ...] = ("Critica", "Alta"),
+    limit: int = 10,
+) -> list[dict]:
+    """Recopila alertas críticas/altas agrupadas por nombre, conservando la evidencia
+    de cada caso individual para fundamentar el informe ejecutivo.
+
+    Returns: lista de dicts con keys
+        alert_name, severity, layer, n_cases, n_visits, n_sessions,
+        impact, recommendation, sample_evidence (list de {visit_name, sample_name, evidence}).
+    Ordenada por severidad (Critica > Alta) y luego por número de casos descendente.
+    """
+    grouped: dict[tuple[str, str], dict] = {}
+    for row in rows:
+        alert_path = get_row_alerts_path(row)
+        if not alert_path.exists():
+            continue
+        try:
+            payload = json.loads(alert_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for alert in payload.get("all", []):
+            severity = alert.get("severity", "")
+            if severity not in severities:
+                continue
+            alert_name = alert.get("alert_name", alert.get("rule", "Alerta sin nombre"))
+            key = (severity, alert_name)
+            entry = grouped.setdefault(
+                key,
+                {
+                    "alert_name": alert_name,
+                    "severity": severity,
+                    "layer": alert.get("layer", ""),
+                    "impact": alert.get("impact", ""),
+                    "recommendation": alert.get("recommendation", ""),
+                    "visits": set(),
+                    "sessions": set(),
+                    "sample_evidence": [],
+                },
+            )
+            entry["visits"].add(row.get("visit_name", ""))
+            entry["sessions"].add(row.get("sample_id", ""))
+            entry["sample_evidence"].append({
+                "visit_name": row.get("visit_name", ""),
+                "sample_name": row.get("sample_id", ""),
+                "evidence": alert.get("evidence", ""),
+            })
+
+    severity_rank = {"Critica": 0, "Alta": 1}
+    ordered = []
+    for entry in grouped.values():
+        ordered.append({
+            "alert_name": entry["alert_name"],
+            "severity": entry["severity"],
+            "layer": entry["layer"],
+            "impact": entry["impact"],
+            "recommendation": entry["recommendation"],
+            "n_cases": len(entry["sample_evidence"]),
+            "n_visits": len({v for v in entry["visits"] if v}),
+            "n_sessions": len({s for s in entry["sessions"] if s}),
+            "sample_evidence": entry["sample_evidence"],
+        })
+    ordered.sort(key=lambda it: (severity_rank.get(it["severity"], 99), -it["n_cases"], it["alert_name"]))
+    return ordered[:limit]
+
+
 def build_pcap_alerts_plain_text(rows: list[dict], limit: int = 8) -> str:
     aggregated = aggregate_pcap_alerts(rows)
     if not aggregated:
@@ -622,22 +692,47 @@ def build_obj1_characterization_summary(rows: list[dict]) -> dict:
 
 
 def build_obj1_characterization_text(obj1: dict) -> str:
-    support_eta = "Si" if obj1.get("supports_direct_eta_estimation") else "No"
-    support_field = "Si" if obj1.get("supports_field_contrast") else "No"
+    # Conteos
+    n_baseline = obj1.get('sessions_useful_for_baseline', 0)
+    n_serial = obj1.get('sessions_useful_for_serial_signatures', 0)
+    n_collar = obj1.get('sessions_useful_for_collar_telemetry', 0)
+    n_field = obj1.get('sessions_with_field_validation', 0)
+    n_eta = obj1.get('sessions_useful_for_direct_eta', 0)
+    # Métricas (los promedios se calculan internamente; aquí solo los formateamos con unidad)
+    eta_pct = obj1.get('avg_eta_direct_pct') or 0.0
+    # Justificación explícita de Si/No (umbrales documentados en el motor)
+    support_eta = obj1.get("supports_direct_eta_estimation")
+    support_eta_text = (
+        f"Si (η directa = {eta_pct:.2f}% sobre {n_eta} sesion(es) con evidencia simultanea)"
+        if support_eta else
+        f"No (η directa = {eta_pct:.2f}% o cobertura insuficiente: {n_eta} sesion(es))"
+    )
+    support_field = obj1.get("supports_field_contrast")
+    support_field_text = (
+        f"Si ({n_field} sesion(es) con validacion presencial)"
+        if support_field else
+        f"No (sin sesiones con validacion presencial: {n_field})"
+    )
     return f"""
 - Proposito: caracterizacion forense y linea base del Objetivo 1.
-- Sesiones utiles para baseline de red: {obj1.get('sessions_useful_for_baseline', 0)}
-- Sesiones utiles para firmas seriales: {obj1.get('sessions_useful_for_serial_signatures', 0)}
-- Sesiones utiles para telemetria de collar: {obj1.get('sessions_useful_for_collar_telemetry', 0)}
-- Sesiones con validacion de campo: {obj1.get('sessions_with_field_validation', 0)}
-- Sesiones con soporte para eta directa: {obj1.get('sessions_useful_for_direct_eta', 0)}
-- Latencia baseline promedio: {format_metric(obj1.get('avg_latency_baseline_ms'))}
-- Jitter baseline promedio: {format_metric(obj1.get('avg_jitter_baseline_ms'))}
-- Cobertura heartbeat promedio: {format_metric(obj1.get('avg_heartbeat_coverage_pct'), 2)}
-- Eta directa promedio: {format_metric(obj1.get('avg_eta_direct_pct'), 2)}
-- Multicast promedio: {format_metric(obj1.get('avg_multicast_pct'), 2)}
-- Hay soporte defendible para eta directa: {support_eta}
-- Hay contraste con campo: {support_field}
+
+Cobertura del instrumento (conteos):
+- Sesiones utiles para baseline de red:          {n_baseline}
+- Sesiones utiles para firmas seriales:          {n_serial}
+- Sesiones utiles para telemetria de collar:     {n_collar}
+- Sesiones con eta directa estimable:            {n_eta}
+- Sesiones con validacion de campo (presencial): {n_field}
+
+Metricas promedio del lote (con unidades):
+- Latencia baseline:        {format_metric(obj1.get('avg_latency_baseline_ms'))} ms
+- Jitter baseline:          {format_metric(obj1.get('avg_jitter_baseline_ms'))} ms
+- Cobertura heartbeat:      {format_metric(obj1.get('avg_heartbeat_coverage_pct'), 2)} %
+- Eta directa:              {format_metric(obj1.get('avg_eta_direct_pct'), 2)} %
+- Multicast:                {format_metric(obj1.get('avg_multicast_pct'), 2)} %
+
+Capacidades defendibles del Objetivo 1 (con justificacion):
+- Eta directa defendible:        {support_eta_text}
+- Contraste con campo disponible: {support_field_text}
 """.strip()
 
 
@@ -1032,6 +1127,9 @@ def build_correlacion_global_rows(rows: list[dict]) -> list[dict]:
             for match in reader:
                 correlation_rows.append(
                     {
+                        "visit_name": row.get("visit_name", ""),
+                        "sample_id": row.get("sample_id", ""),
+                        "block_label": row.get("block_label", ""),
                         "timestamp_serial": match.get("timestamp_serial", match.get("serial_timestamp", "")),
                         "delta_ms": match.get("delta_ms", ""),
                         "serial_event": match.get("serial_event", ""),
@@ -1358,6 +1456,13 @@ OBJ1_PHASES = [
         "end": date(2026, 4, 9),
         "recommended_for": "contraste con observacion presencial y depuracion semantica del motor",
     },
+    {
+        "key": "fase_pre_gateway_consolidada",
+        "label": "Fase pre-gateway consolidada",
+        "start": date(2026, 4, 10),
+        "end": date(2026, 5, 10),
+        "recommended_for": "linea base pre-gateway con parser mejorado y port mirroring GS305E; referencia estadistica para Objetivo 4",
+    },
 ]
 
 
@@ -1454,19 +1559,39 @@ def build_obj1_profiles_text(obj1_profiles: dict) -> str:
             [
                 f"- {profile['label']} ({profile['start']} a {profile['end']}):",
                 f"  visitas={profile['visit_count']}, sesiones={profile['session_count']}, baseline={profile['baseline_sessions']}, serial={profile['serial_sessions']}, collar={profile['collar_sessions']}, pcap_parseado={profile['parsed_pcap_sessions']}",
-                f"  latencia={format_metric(profile.get('avg_latency_baseline_ms'))} ms, jitter={format_metric(profile.get('avg_jitter_baseline_ms'))} ms, heartbeat={format_metric(profile.get('avg_heartbeat_coverage_pct'), 2)}%, eta={format_metric(profile.get('avg_eta_direct_pct'), 2)}, multicast={format_metric(profile.get('avg_multicast_pct'), 2)}%, tasa_multicast={format_metric(profile.get('avg_multicast_rate_hz'), 3)} Hz",
+                f"  latencia={format_metric(profile.get('avg_latency_baseline_ms'))} ms, "
+                f"jitter={format_metric(profile.get('avg_jitter_baseline_ms'))} ms, "
+                f"heartbeat={format_metric(profile.get('avg_heartbeat_coverage_pct'), 2)} %, "
+                f"eta={format_metric(profile.get('avg_eta_direct_pct'), 2)} %, "
+                f"multicast={format_metric(profile.get('avg_multicast_pct'), 2)} %, "
+                f"tasa_multicast={format_metric(profile.get('avg_multicast_rate_hz'), 3)} Hz",
                 f"  uso recomendado: {profile['recommended_for']}",
             ]
         )
 
     recommendation = obj1_profiles.get("cap1_cap2_recommendation", {})
+    eta_def = recommendation.get('initial_eta_is_defendable')
+    mc_def = recommendation.get('initial_multicast_rate_is_defendable')
+    eta_val = recommendation.get('use_initial_eta_direct_pct')
+    mc_val = recommendation.get('use_initial_multicast_rate_hz')
+    eta_text = (
+        f"Si (η = {format_metric(eta_val, 2)} %)"
+        if eta_def else
+        f"No (η = {format_metric(eta_val, 2)} % o evidencia insuficiente en la fase inicial)"
+    )
+    mc_text = (
+        f"Si (tasa multicast = {format_metric(mc_val, 3)} Hz)"
+        if mc_def else
+        f"No (tasa multicast = {format_metric(mc_val, 3)} Hz o variacion alta en la fase inicial)"
+    )
     lines.extend(
         [
-            "- Recomendacion para Capitulo 1 y Capitulo 2:",
-            f"  latencia inicial defendible = {format_metric(recommendation.get('use_initial_latency_baseline_ms'))} ms",
-            f"  jitter inicial defendible = {format_metric(recommendation.get('use_initial_jitter_baseline_ms'))} ms",
-            f"  eta inicial defendible = {'Si' if recommendation.get('initial_eta_is_defendable') else 'No'}",
-            f"  frecuencia multicast inicial defendible = {'Si' if recommendation.get('initial_multicast_rate_is_defendable') else 'No'}",
+            "",
+            "- Recomendacion para Capitulo 1 y Capitulo 2 (linea base inicial defendible):",
+            f"  latencia inicial defendible      = {format_metric(recommendation.get('use_initial_latency_baseline_ms'))} ms",
+            f"  jitter inicial defendible        = {format_metric(recommendation.get('use_initial_jitter_baseline_ms'))} ms",
+            f"  eta inicial defendible           = {eta_text}",
+            f"  frecuencia multicast defendible  = {mc_text}",
         ]
     )
     return "\n".join(lines)
@@ -1890,10 +2015,10 @@ Visita: {visit_name}
 - Alertas totales: {summary['total_alertas']}
 - Alertas criticas: {summary['total_alertas_criticas']}
 - Alertas altas: {summary['total_alertas_altas']}
-- Latencia media promedio: {format_metric(summary['avg_lat_media'])}
-- Eta promedio: {format_metric(summary['avg_eta_extraccion'], 2)}
-- Desfase medio promedio: {format_metric(summary['avg_desfase_medio_ms'])}
-- Multicast promedio: {format_metric(summary['avg_multicast_pct'], 2)}
+- Latencia media promedio: {format_metric(summary['avg_lat_media'])} ms
+- Eta promedio: {format_metric(summary['avg_eta_extraccion'], 2)} %
+- Desfase medio promedio: {format_metric(summary['avg_desfase_medio_ms'])} ms
+- Multicast promedio: {format_metric(summary['avg_multicast_pct'], 2)} %
 
 2. Conteo principal de cobertura
 - Baseline: {artifact_counts['Baseline']}
@@ -1932,11 +2057,36 @@ Conciliacion de conteos:
 
     (visit_reports_dir / f"{visit_name}_summary.txt").write_text(report_text, encoding="utf-8")
     (visit_reports_dir / f"{visit_name}_obj1_summary.txt").write_text(build_obj1_characterization_text(obj1_summary), encoding="utf-8")
-    human_text = build_human_summary_text(visit_name, summary, sample_type_counts)
-    (visit_reports_dir / f"{visit_name}_summary_humano.txt").write_text(human_text, encoding="utf-8")
 
 
-def write_global_summary(run_name: str, root_dirs: list[Path], rows: list[dict]) -> list[str]:
+def _format_duration_human(seconds: float) -> str:
+    seconds = max(0, int(seconds))
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    if hours:
+        return f"{hours}h {minutes:02d}m {secs:02d}s"
+    if minutes:
+        return f"{minutes}m {secs:02d}s"
+    return f"{secs}s"
+
+
+def _format_bytes_human(num_bytes: int) -> str:
+    size = float(num_bytes)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024.0 or unit == "TB":
+            return f"{size:.2f} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} TB"
+
+
+def write_global_summary(
+    run_name: str,
+    root_dirs: list[Path],
+    rows: list[dict],
+    processing_duration_seconds: float | None = None,
+    total_input_bytes: int = 0,
+) -> list[str]:
     if not rows:
         return []
 
@@ -2003,14 +2153,23 @@ def write_global_summary(run_name: str, root_dirs: list[Path], rows: list[dict])
     write_csv(processed_dir / f"{run_name}_sessions.csv", rows)
     write_csv(processed_dir / f"{run_name}_correlacion_global.csv", correlation_rows, fieldnames=list(CORRELACION_COLS.keys()))
 
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     report_text = f"""
-RESUMEN GENERAL DE APOYO
-========================
+RESUMEN GENERAL DE APOYO (anexo tecnico)
+========================================
 
-Nombre del lote: {run_name}
+Nombre del lote:  {run_name}
+Generado:         {generated_at}
+Fuentes:          data/processed/global/resumen_arbol/{run_name}/{run_name}_summary.json
+                  data/processed/global/resumen_arbol/{run_name}/{run_name}_visits.csv
+                  data/processed/global/resumen_arbol/{run_name}/{run_name}_sessions.csv
 
 Raices procesadas:
 {build_roots_description(root_dirs)}
+
+Nota: este es el anexo tecnico de auditoria. Para la lectura ejecutiva, ver
+{run_name}_executive_summary.txt; para la caracterizacion del Objetivo 1, ver
+{run_name}_obj1_summary.txt y {run_name}_obj1_profiles.txt.
 
 1. Cobertura global
 - Visitas incluidas: {summary['total_visits']}
@@ -2025,10 +2184,10 @@ Raices procesadas:
 - Alertas totales: {summary['total_alertas']}
 - Alertas criticas: {summary['total_alertas_criticas']}
 - Alertas altas: {summary['total_alertas_altas']}
-- Latencia media promedio: {format_metric(summary['avg_lat_media'])}
-- Eta promedio: {format_metric(summary['avg_eta_extraccion'], 2)}
-- Desfase medio promedio: {format_metric(summary['avg_desfase_medio_ms'])}
-- Multicast promedio: {format_metric(summary['avg_multicast_pct'], 2)}
+- Latencia media promedio: {format_metric(summary['avg_lat_media'])} ms
+- Eta promedio: {format_metric(summary['avg_eta_extraccion'], 2)} %
+- Desfase medio promedio: {format_metric(summary['avg_desfase_medio_ms'])} ms
+- Multicast promedio: {format_metric(summary['avg_multicast_pct'], 2)} %
 
 2. Conteo principal de cobertura
 - Baseline: {artifact_counts['Baseline']}
@@ -2098,8 +2257,57 @@ Conciliacion de conteos:
     (reports_dir / f"{run_name}_summary.txt").write_text(report_text, encoding="utf-8")
     (reports_dir / f"{run_name}_obj1_summary.txt").write_text(build_obj1_characterization_text(obj1_summary), encoding="utf-8")
     (reports_dir / f"{run_name}_obj1_profiles.txt").write_text(build_obj1_profiles_text(obj1_profiles), encoding="utf-8")
-    human_text = build_human_summary_text(run_name, summary, sample_type_counts)
-    (reports_dir / f"{run_name}_summary_humano.txt").write_text(human_text, encoding="utf-8")
+    
+    # Generar informe ejecutivo orientado al Objetivo 1
+    failed_sessions = len([row for row in rows if row.get("processing_error")])
+    obj1 = summary.get("objective_1_characterization", {})
+    gateway_readiness = summary.get("gateway_readiness", {})
+    
+    top_alerts_detail = collect_top_alerts_with_evidence(rows, limit=15)
+
+    duration_text = (
+        _format_duration_human(processing_duration_seconds)
+        if processing_duration_seconds is not None else "N/D"
+    )
+    input_size_text = _format_bytes_human(total_input_bytes) if total_input_bytes else "N/D"
+    
+    executive_text = build_executive_summary(
+        batch_name=run_name,
+        total_visits=summary['total_visits'],
+        total_sessions=summary['total_sessions'],
+        sessions_with_pcap=summary['sessions_with_pcap'],
+        sessions_with_serial=summary['sessions_with_serial'],
+        sessions_with_correlation=summary['sessions_with_correlation'],
+        critical_alerts=summary['total_alertas_criticas'],
+        high_alerts=summary['total_alertas_altas'],
+        total_alerts=summary['total_alertas'],
+        avg_latency=summary['avg_lat_media'] or 0.0,
+        avg_eta=summary['avg_eta_extraccion'] or 0.0,
+        sessions_with_field_validation=int(obj1.get("sessions_with_field_validation", 0) or 0),
+        processing_duration=duration_text,
+        total_input_size=input_size_text,
+        failed_sessions=failed_sessions,
+        top_alerts_detail=top_alerts_detail,
+        avg_multicast=summary.get('avg_multicast_pct') or 0.0,
+        avg_offset=summary.get('avg_desfase_medio_ms') or 0.0,
+        avg_jitter_baseline=obj1.get('avg_jitter_baseline_ms') or 0.0,
+        avg_heartbeat_coverage=obj1.get('avg_heartbeat_coverage_pct') or 0.0,
+        sessions_useful_for_baseline=int(obj1.get('sessions_useful_for_baseline', 0) or 0),
+        sessions_useful_for_serial=int(obj1.get('sessions_useful_for_serial_signatures', 0) or 0),
+        sessions_useful_for_collar=int(obj1.get('sessions_useful_for_collar_telemetry', 0) or 0),
+        sessions_useful_for_direct_eta=int(obj1.get('sessions_useful_for_direct_eta', 0) or 0),
+        obj1_supports={
+            "supports_latency_jitter_baseline": obj1.get("supports_latency_jitter_baseline"),
+            "supports_serial_signature_characterization": obj1.get("supports_serial_signature_characterization"),
+            "supports_udp_exposure_characterization": obj1.get("supports_udp_exposure_characterization"),
+            "supports_direct_eta_estimation": obj1.get("supports_direct_eta_estimation"),
+            "supports_field_contrast": obj1.get("supports_field_contrast"),
+        },
+        gateway_ready=bool(gateway_readiness.get("ready_for_offline_validation")),
+        visit_rows=visit_rows,
+    )
+    (reports_dir / f"{run_name}_executive_summary.txt").write_text(executive_text, encoding="utf-8")
+    
     return validate_outputs(processed_dir, run_name)
 
 
@@ -2177,11 +2385,18 @@ def process_session(session: dict, args) -> dict:
             pcap["file_detected"] = True
             pcap["parse_error"] = "Scapy no esta instalado; se detecto el archivo PCAP pero no se analizo su contenido."
         else:
-            pcap = parse_pcap_file(pcap_path, args.target_ip, args.target_port, args.signature)
-            pcap["available"] = True
-            pcap["source_path"] = str(pcap_path)
-            pcap["file_detected"] = True
-            pcap["parse_error"] = ""
+            try:
+                pcap = parse_pcap_file(pcap_path, args.target_ip, args.target_port, args.signature)
+                pcap["available"] = True
+                pcap["source_path"] = str(pcap_path)
+                pcap["file_detected"] = True
+                pcap["parse_error"] = ""
+            except Exception as exc:
+                pcap = empty_pcap_summary()
+                pcap["available"] = False
+                pcap["source_path"] = str(pcap_path)
+                pcap["file_detected"] = True
+                pcap["parse_error"] = f"No fue posible leer el archivo PCAP: {exc}"
     else:
         pcap = empty_pcap_summary()
         pcap["source_path"] = ""
@@ -2198,6 +2413,19 @@ def process_session(session: dict, args) -> dict:
     field_validation = build_field_validation_summary(session, capture_dir, serial)
     alerts = build_alert_package(baseline, serial, pcap, correlation, session_type=session_type, operation_mode=operation_mode)
     rules = build_priority_rules(args.target_port, args.window_ms)
+    gateway_expectations = build_gateway_expectations(
+        sample_name,
+        baseline,
+        serial,
+        antenna_udp,
+        pcap,
+        correlation,
+        alerts,
+        args.window_ms,
+        operation_mode=operation_mode,
+        block_label=block_label,
+        field_validation=field_validation,
+    )
 
     dump_json(output_dir / "baseline_summary.json", baseline)
     dump_json(output_dir / "serial_summary.json", serial)
@@ -2207,6 +2435,7 @@ def process_session(session: dict, args) -> dict:
     dump_json(output_dir / "field_validation_summary.json", field_validation)
     dump_json(output_dir / "alerts.json", alerts)
     dump_json(output_dir / "priority_rules.json", rules)
+    dump_json(output_dir / "gateway_expectations.json", gateway_expectations)
     write_csv(output_dir / "serial_events.csv", serial["events"])
     write_csv(output_dir / "serial_frames.csv", serial.get("frames", []))
     write_csv(output_dir / "serial_markers.csv", serial.get("marker_events", []))
@@ -2410,6 +2639,20 @@ def main() -> None:
                 failures.append((session["sample_id"], str(exc)))
                 print(f"[ERROR] {session['sample_id']}: {exc}")
 
+    # Métricas de la corrida: duración total y tamaño de datos fuente procesados
+    processing_duration_seconds = time.monotonic() - t_batch_start
+    total_input_bytes = 0
+    for root_dir in root_dirs:
+        try:
+            for path in root_dir.rglob("*"):
+                if path.is_file():
+                    try:
+                        total_input_bytes += path.stat().st_size
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+
     visit_groups: dict[str, list[dict]] = {}
     for row in processed_rows:
         visit_groups.setdefault(row["visit_name"], []).append(row)
@@ -2420,7 +2663,13 @@ def main() -> None:
 
     should_write_global_summary = len(visit_groups) > 1 or len(root_dirs) > 1 or bool(args.run_name)
     if should_write_global_summary:
-        output_issues = write_global_summary(run_name, root_dirs, processed_rows)
+        output_issues = write_global_summary(
+            run_name,
+            root_dirs,
+            processed_rows,
+            processing_duration_seconds=processing_duration_seconds,
+            total_input_bytes=total_input_bytes,
+        )
         print(f"[OK] Resumen general del lote generado: {run_name}")
         if output_issues:
             print(f"[WARN] Validacion de salida detecto {len(output_issues)} problema(s).")
