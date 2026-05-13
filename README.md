@@ -42,6 +42,9 @@ FincaDiag_Modular/
 │     ├─ config.py
 │     ├─ models.py
 │     └─ utils.py
+├─ probe_forense/  ← scripts del instrumento forense (corren en la Raspberry Pi 5)
+│  ├─ FincaDiag.py
+│  └─ FincaScheduler.py
 ├─ main.py
 └─ requirements.txt
 ```
