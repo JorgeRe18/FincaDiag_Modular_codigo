@@ -110,6 +110,20 @@ Si existen dos baselines alrededor de una captura, el sistema detecta:
 - `baseline_post`: el baseline inmediatamente posterior por timestamp
 - `baseline_usado`: por defecto el `baseline_pre`; si no existe, usa el `baseline_post`
 
+Cuando existen **ambos** (`baseline_pre` y `baseline_post`), el motor calcula ademas un
+analisis de transicion de red (`baseline_transition`) que compara el estado de la red
+antes y despues de la captura:
+
+| Campo | Descripcion |
+|-------|-------------|
+| `lat_media_delta` | Cambio de latencia media pre→post (ms) |
+| `jitter_delta` | Cambio de jitter pre→post (ms) |
+| `packet_loss_delta` | Cambio de perdida de paquetes pre→post (%) |
+| `nodos_delta` | Cambio en cantidad de nodos detectados en red |
+
+Si solo existe uno de los dos baselines, `baseline_transition.available = false` y
+los deltas quedan en `null`.
+
 Si la propia `Captura_*` ya contiene los archivos de baseline, esa carpeta se usa como
 baseline principal de la sesion.
 
