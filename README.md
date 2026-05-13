@@ -1,13 +1,23 @@
 # FincaDiag Modular
 
-Base modular para analizar:
+Motor de analisis forense de telemetria operativa para el ecosistema SenseHub Dairy
+en Finca La Esmeralda. Desarrollado como instrumento de medicion para un proyecto de
+investigacion sobre pasarelas perimetrales en entornos ganaderos con controladores
+propietarios sin documentacion publica.
 
-- baseline de red
-- telemetria serial
-- trafico PCAP
-- correlacion temporal serial <-> red
-- alertas de ciberseguridad por capa
-- reglas de prioridad para un motor perimetral
+El instrumento forense corre en una **Raspberry Pi 5** instalada en la finca, que captura
+trafico serial, PCAP y UDP del controlador de ordeño de forma pasiva. Los datos se
+transfieren a una estacion Windows para procesamiento, y los resultados normalizados se
+publican al broker MQTT/TLS local (tambien en la Raspberry Pi 5) mediante la pasarela
+perimetral incluida en este repositorio.
+
+Capacidades principales:
+
+- analisis de baseline de red (latencia, jitter, PLR, ARP)
+- parseo de telemetria serial propietaria (protocolo SenseHub)
+- correlacion temporal serial ↔ red para calculo de eficiencia (η)
+- deteccion de alertas por capa (baseline, serial, pcap, correlacion)
+- publicacion normalizada de eventos de ordeño via MQTT/TLS (store-and-forward)
 
 ## Estructura
 
