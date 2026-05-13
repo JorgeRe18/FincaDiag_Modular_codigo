@@ -15,13 +15,18 @@ Base modular para analizar:
 FincaDiag_Modular/
 ├─ data/
 │  ├─ raw/
-│  └─ processed/
+│  ├─ processed/
+│  └─ gateway/
+│     ├─ published/   ← JSONL y readable.json generados por el gateway
+│     └─ spool/       ← mensajes pendientes de publicar (store-and-forward)
 ├─ reports/
 ├─ src/
 │  └─ fincadiag/
 │     ├─ analysis/
 │     ├─ dashboard/
 │     ├─ export/
+│     ├─ gateway/     ← modulo de pasarela perimetral MQTT/TLS
+│     ├─ ingest/      ← descubrimiento y construccion de sesiones
 │     ├─ parsers/
 │     ├─ cli.py
 │     ├─ config.py
@@ -211,6 +216,62 @@ reports/
       Lote_4_visitas/
         Lote_4_visitas_summary.txt
 ```
+
+## Gateway perimetral
+
+El modulo `gateway` toma una sesion ya procesada por el motor y publica sus mensajes
+normalizados a un broker MQTT/TLS. Soporta modo dry-run (escribe localmente) y modo
+produccion (publica al broker).
+
+### Dry-run (sin broker)
+
+```powershell
+$env:PYTHONPATH="src"
+python -m fincadiag.gateway.runtime `
+  --session-dir "data\processed\visits\Visita_11_05_2026\sesiones\TOMA_PM__1PM__Captura_20260511_130005" `
+  --dry-run
+```
+
+Genera los archivos `.jsonl` y `.readable.json` en `data/gateway/published/` sin
+necesitar broker activo.
+
+### Publicacion real (broker MQTT/TLS)
+
+```powershell
+$env:PYTHONPATH="src"
+$env:MQTT_HOST="<ip_broker>"
+$env:MQTT_PORT="8883"
+$env:TOPIC_ROOT="fincadiag/la_esmeralda"
+$env:CA_PATH="<ruta>/ca.crt"
+$env:CERT_PATH="<ruta>/client.crt"
+$env:KEY_PATH="<ruta>/client.key"
+python -m fincadiag.gateway.runtime `
+  --session-dir "data\processed\visits\Visita_11_05_2026\sesiones\TOMA_PM__1PM__Captura_20260511_130005"
+```
+
+### Salidas del gateway
+
+Cada sesion publicada genera dos archivos en `data/gateway/published/`:
+
+- `<session_id>.jsonl` — un mensaje JSON por linea, formato de ingesta
+- `<session_id>.readable.json` — version legible con metadatos y conteos
+
+El motor tambien genera un archivo `gateway_expectations.json` por sesion procesada
+(junto a `correlation_summary.json`, `pcap_summary.json`, etc.) que sirve como
+oraculo/checklist: describe los tipos de mensajes esperados y las metricas que el
+gateway deberia reflejar para esa sesion.
+
+### Tipos de mensaje publicados
+
+| Tipo | Descripcion |
+|------|-------------|
+| `session_summary` | Resumen general de la sesion |
+| `baseline_snapshot` | Estado de red al momento de la captura |
+| `pcap_summary` | Estadisticas de trafico PCAP |
+| `alerts_summary` | Conteo y severidad de alertas por capa |
+| `collar_summary` | Telemetria de collares SCR |
+| `correlation_summary` | η, desfase_medio, matches |
+| `cow_event` | Un mensaje por evento de vaca (status, RFID, confianza, dwell) |
 
 ## Ejecutar dashboard
 
