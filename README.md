@@ -1,4 +1,4 @@
-# FincaDiag Modular
+# Aletheia — Motor de Análisis Forense FincaDiag
 
 Motor de analisis forense de telemetria operativa para el ecosistema SenseHub Dairy
 en Finca La Esmeralda. Desarrollado como instrumento de medicion para un proyecto de
