@@ -829,6 +829,7 @@ def discover_sessions_from_roots(root_dirs: list[Path]) -> list[dict]:
 
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Herramienta modular de apoyo analitico para FincaDiag")
+    # El motor puede trabajar sobre una sola captura, una raiz completa o varias raices en un mismo lote.
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--sample", help="Ruta a una carpeta Captura_*")
     target.add_argument("--root", help="Ruta raiz para descubrir y procesar varias capturas")
@@ -2311,6 +2312,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.sample:
+        # Esta ruta sirve para depurar una sesion puntual sin recorrer toda la finca.
         session = discover_single_session(Path(args.sample))
         if args.dry_run:
             print_session_preview(session)
@@ -2321,6 +2323,7 @@ def main() -> None:
     if args.root:
         root_dirs = [Path(args.root).resolve()]
     else:
+        # Cuando hay varias raices, todas terminan en un mismo consolidado global.
         root_dirs = [Path(item).resolve() for item in args.roots]
 
     sessions = discover_sessions_from_roots(root_dirs)
@@ -2328,6 +2331,7 @@ def main() -> None:
         searched = ", ".join(str(root_dir) for root_dir in root_dirs)
         raise SystemExit(f"No se encontraron carpetas Captura_* bajo: {searched}")
 
+    # El nombre del lote es la referencia que luego usa el dashboard y los resumenes globales.
     run_name = build_batch_run_name(root_dirs, args.run_name)
 
     print(f"[INFO] Sesiones detectadas: {len(sessions)}")

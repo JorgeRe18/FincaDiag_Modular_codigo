@@ -63,6 +63,7 @@ def _collect_candidate_baselines(capture_dir: Path, search_root: Path) -> list[t
     current = capture_dir.parent
     depth = 0
 
+    # Se sube por el arbol para buscar baselines cercanos sin salirse de la raiz analizada.
     while True:
         if current.exists():
             for child in current.iterdir():
@@ -180,6 +181,7 @@ def infer_operation_mode(capture_dir: Path) -> str:
     etl_exists = any(capture_dir.glob("*.etl"))
     pcap_exists = resolve_pcap_path(capture_dir) is not None
 
+    # La presencia de serial suele marcar escenarios de ordeno; si no, se interpreta como telemetria biótica.
     if serial_exists:
         return "ordeno_completo"
     if antenna_udp_exists or etl_exists or pcap_exists:
@@ -190,6 +192,7 @@ def infer_operation_mode(capture_dir: Path) -> str:
 def build_session(search_root: Path, capture_dir: Path) -> dict:
     baseline_pre, baseline_post = find_neighbor_baselines(capture_dir, search_root)
     baseline_selected = baseline_pre if baseline_pre else baseline_post
+    # Aqui se concentra la foto minima de una sesion: identidad, bloque, evidencias y baseline asociado.
     return {
         "sample_id": build_session_id(search_root, capture_dir),
         "visit_name": extract_visit_name(capture_dir),
@@ -230,6 +233,7 @@ def discover_sessions(root_dir: Path) -> list[dict]:
     root_dir = root_dir.resolve()
     sessions = []
 
+    # El descubrimiento es intencionalmente simple: recorrer todo y quedarse solo con capturas utiles.
     for path in sorted(root_dir.rglob("*")):
         if not is_capture_dir(path):
             continue

@@ -653,6 +653,7 @@ def _summarize_semantic_records(records: list[dict]) -> dict:
 def build_field_validation_summary(session: dict, capture_dir: Path, serial: dict) -> dict:
     summary = empty_field_validation_summary()
 
+    # Esta validacion solo tiene sentido cuando la sesion realmente corresponde a un ordeno completo.
     if session.get("operation_mode") != "ordeno_completo":
         summary["reason"] = "modo_operativo_sin_validacion_de_ordeno"
         return summary
@@ -669,6 +670,7 @@ def build_field_validation_summary(session: dict, capture_dir: Path, serial: dic
         return summary
 
     rows = _load_validation_rows()
+    # Primero se filtra por visita y bloque para no mezclar observaciones de otra jornada.
     candidate_rows = [
         row
         for row in rows
@@ -688,6 +690,7 @@ def build_field_validation_summary(session: dict, capture_dir: Path, serial: dic
         summary["reason"] = "sin_ventana_temporal_de_ordeno"
         return summary
 
+    # Si la captura y el ordeno no se cruzan en el tiempo, no hay base seria para comparar parser y campo.
     overlap_start = max(capture_start_dt, milking_start_dt)
     overlap_end = min(capture_end_dt, milking_end_dt)
     overlap_seconds = max(0.0, round((overlap_end - overlap_start).total_seconds(), 3))

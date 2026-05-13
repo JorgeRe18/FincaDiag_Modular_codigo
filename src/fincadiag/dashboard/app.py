@@ -18,6 +18,7 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIG Y TEMA
 # ─────────────────────────────────────────────────────────────────────────────
+# El dashboard esta pensado como vista ejecutiva del lote procesado, no como reemplazo del reporte tecnico.
 st.set_page_config(page_title="FincaDiag", layout="wide")
 
 GREEN  = "#27AE60"
@@ -103,6 +104,7 @@ DB_PATH       = BASE_DIR / "data" / "finca_muestras.db"
 # DATOS
 # ─────────────────────────────────────────────────────────────────────────────
 def get_db() -> pd.DataFrame:
+    # La base consolidada sirve para metricas transversales que no siempre estan en los CSV por visita.
     if not DB_PATH.exists():
         return pd.DataFrame()
     try:
@@ -196,7 +198,7 @@ def dark(fig, h=240):
 def render_kpi_banner(visits_df: pd.DataFrame, db_df: pd.DataFrame, summary: dict):
     st.markdown('<div class="sec-hdr">Indicadores clave del diagnóstico forense</div>', unsafe_allow_html=True)
 
-    # Calcular valores desde los datos reales
+    # Aqui se priorizan indicadores de lectura rapida para saber como viene el lote sin abrir cada visita.
     eta_global  = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").mean()) if not visits_df.empty else 0.0
     jitter_max  = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series()), errors="coerce").max()) if not db_df.empty else 71.3
     plr_med     = num(pd.to_numeric(db_df.get("packet_loss", pd.Series()), errors="coerce").mean()) if not db_df.empty else 0.0

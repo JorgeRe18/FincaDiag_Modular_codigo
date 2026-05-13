@@ -18,15 +18,18 @@ RECONSTRUCTION_WINDOW_MS = 50
 HEARTBEAT_EXPECTED_MS = 5000
 HEARTBEAT_GAP_THRESHOLD_MS = 15000
 RFID_TIMEOUT_MS = 30000
+E2_ASSIGNMENT_WINDOW_MS = 30000
 FLOW_IDLE_TIMEOUT_MS = 15000
 MAX_BATCH_SLOTS = 6
-C2_DUPLICATE_WINDOW_MS = 750
+C2_DUPLICATE_WINDOW_MS = 1200
 E0_ATTACH_WINDOW_MS = 10000
 BATCH_STALE_GAP_MS = 120000
 TEMP_PREP_WINDOW_MS = 45000
 CADENCE_STEP_MS = 127000
 CADENCE_TOLERANCE_MS = 12000
 OPERATIONAL_ANCHOR_MIN_STEPS = 4
+NOISE_EVENT_MAX_DWELL_MS = 5000
+E2_GRACE_AFTER_C3_MS = 15000
 
 
 def _contains_subsequence(tokens: list[str], subsequence: list[str]) -> bool:
@@ -296,20 +299,54 @@ def _merge_c2_into_slot(slot: dict, marker_row: dict) -> None:
     slot["last_c2_ts_ms"] = marker_row["ts_ms"]
 
 
-def _pick_e2_target(batch: dict | None) -> dict | None:
+def _pick_e2_target(batch: dict | None, marker_row: dict) -> dict | None:
     if batch is None:
         return None
-    missing_rfid = sorted(
-        [slot for slot in batch["active_slots"] if slot.get("first_e2_ts_ms") is None],
-        key=lambda item: (item["c2_ts_ms"], item["slot_index"]),
-    )
-    if missing_rfid:
-        return missing_rfid[0]
+    missing_rfid = [
+        slot
+        for slot in batch["active_slots"]
+        if slot.get("first_e2_ts_ms") is None and slot.get("c3_ts_ms") is None
+    ]
+    recent_missing = [
+        slot
+        for slot in missing_rfid
+        if 0
+        <= marker_row["ts_ms"] - slot.get("last_c2_ts_ms", slot["c2_ts_ms"])
+        <= E2_ASSIGNMENT_WINDOW_MS
+    ]
+    if recent_missing:
+        return max(
+            recent_missing,
+            key=lambda item: (item.get("last_c2_ts_ms", item["c2_ts_ms"]), item["slot_index"]),
+        )
+    if len(missing_rfid) == 1:
+        only_slot = missing_rfid[0]
+        delay_ms = marker_row["ts_ms"] - only_slot.get("last_c2_ts_ms", only_slot["c2_ts_ms"])
+        if 0 <= delay_ms <= RFID_TIMEOUT_MS:
+            return only_slot
     reread_candidates = sorted(
-        [slot for slot in batch["active_slots"] if slot.get("c3_ts_ms") is None],
-        key=lambda item: (item["c2_ts_ms"], item["slot_index"]),
+        [
+            slot
+            for slot in batch["active_slots"]
+            if slot.get("first_e2_ts_ms") is not None
+            and slot.get("c3_ts_ms") is None
+            and 0 <= marker_row["ts_ms"] - slot["first_e2_ts_ms"] <= E2_ASSIGNMENT_WINDOW_MS
+        ],
+        key=lambda item: (item.get("last_c2_ts_ms", item["c2_ts_ms"]), item["slot_index"]),
     )
-    return reread_candidates[0] if reread_candidates else None
+    if reread_candidates:
+        return reread_candidates[-1]
+    grace_candidates = sorted(
+        [
+            slot
+            for slot in batch["events"]
+            if slot.get("first_e2_ts_ms") is None
+            and slot.get("c3_ts_ms") is not None
+            and 0 <= marker_row["ts_ms"] - slot["c3_ts_ms"] <= E2_GRACE_AFTER_C3_MS
+        ],
+        key=lambda item: (item["c3_ts_ms"], item["slot_index"]),
+    )
+    return grace_candidates[-1] if grace_candidates else None
 
 
 def _pick_c3_target(batch: dict | None) -> dict | None:
@@ -394,6 +431,69 @@ def _compute_cadence_metrics(dwell_ms: int | None) -> tuple[int, int | None, boo
     offset_ms = int(dwell_ms - (step_index * CADENCE_STEP_MS))
     cadence_aligned = abs(offset_ms) <= CADENCE_TOLERANCE_MS
     return step_index, offset_ms, cadence_aligned
+
+
+def _infer_identity_status(first_e2_ts_ms: int | None, rfid_latency_ms: int | None, rfid_read_count: int) -> str:
+    if first_e2_ts_ms is None:
+        return "unconfirmed"
+    if rfid_latency_ms is not None and rfid_latency_ms <= RFID_TIMEOUT_MS:
+        return "confirmed"
+    if rfid_read_count > 0:
+        return "probable"
+    return "unconfirmed"
+
+
+def _is_retained_state_suspected(
+    first_e2_ts_ms: int | None,
+    rfid_latency_ms: int | None,
+    filtered_samples: list[FlowSample],
+    ambiguous_flow_sample_count: int,
+    cadence_aligned: bool,
+    c3_ts_ms: int | None,
+) -> bool:
+    return (
+        first_e2_ts_ms is not None
+        and rfid_latency_ms is not None
+        and rfid_latency_ms > RFID_TIMEOUT_MS
+        and not filtered_samples
+        and ambiguous_flow_sample_count == 0
+        and c3_ts_ms is not None
+        and cadence_aligned
+    )
+
+
+def _infer_parser_confidence(
+    first_e2_ts_ms: int | None,
+    rfid_latency_ms: int | None,
+    filtered_samples: list[FlowSample],
+    ambiguous_flow_sample_count: int,
+    cadence_aligned: bool,
+    c3_ts_ms: int | None,
+    retained_state_suspected: bool,
+) -> tuple[float, str]:
+    score = 0.2
+    if first_e2_ts_ms is not None:
+        score += 0.25
+    if rfid_latency_ms is not None and rfid_latency_ms <= RFID_TIMEOUT_MS:
+        score += 0.2
+    elif rfid_latency_ms is not None:
+        score -= 0.15
+    if filtered_samples:
+        score += 0.25
+    if c3_ts_ms is not None:
+        score += 0.1
+    if ambiguous_flow_sample_count > 0:
+        score -= 0.1
+    if retained_state_suspected:
+        score -= 0.25
+    elif cadence_aligned and not filtered_samples:
+        score -= 0.05
+    score = max(0.0, min(1.0, round(score, 3)))
+    if score >= 0.75:
+        return score, "high"
+    if score >= 0.45:
+        return score, "medium"
+    return score, "low"
 
 
 def _assign_flow_samples(
@@ -488,6 +588,28 @@ def _finalize_cow_event(
     if cadence_aligned:
         notes.append("cadencia_127s")
 
+    retained_state_suspected = _is_retained_state_suspected(
+        first_e2_ts_ms,
+        rfid_latency_ms,
+        filtered_samples,
+        ambiguous_flow_sample_count,
+        cadence_aligned,
+        c3_ts_ms,
+    )
+    if retained_state_suspected:
+        notes.append("estado_retenido_probable")
+
+    identity_status = _infer_identity_status(first_e2_ts_ms, rfid_latency_ms, event.get("rfid_read_count", 0))
+    parser_confidence_score, parser_confidence_label = _infer_parser_confidence(
+        first_e2_ts_ms,
+        rfid_latency_ms,
+        filtered_samples,
+        ambiguous_flow_sample_count,
+        cadence_aligned,
+        c3_ts_ms,
+        retained_state_suspected,
+    )
+
     if first_e2_ts_ms is None:
         status = "missing_rfid"
     elif rfid_latency_ms is not None and rfid_latency_ms > RFID_TIMEOUT_MS:
@@ -539,8 +661,28 @@ def _finalize_cow_event(
         flow_start_timestamp=filtered_samples[0].timestamp if filtered_samples else "",
         flow_end_timestamp=filtered_samples[-1].timestamp if filtered_samples else "",
         rfid_read_count=event.get("rfid_read_count", 0),
+        identity_status=identity_status,
+        parser_confidence_score=parser_confidence_score,
+        parser_confidence_label=parser_confidence_label,
+        retained_state_suspected=retained_state_suspected,
         notes=notes,
     )
+
+
+def _is_noise_event(event: CowEvent) -> bool:
+    return (
+        event.first_e2_ts_ms is None
+        and event.flow_sample_count == 0
+        and event.ambiguous_flow_sample_count == 0
+        and event.c3_ts_ms is not None
+        and event.dwell_ms is not None
+        and event.dwell_ms <= NOISE_EVENT_MAX_DWELL_MS
+        and event.c2_count <= 1
+    )
+
+
+def _is_retained_state_event(event: CowEvent) -> bool:
+    return event.retained_state_suspected and event.flow_sample_count == 0 and event.ambiguous_flow_sample_count == 0
 
 
 def _build_cow_batches(
@@ -678,7 +820,7 @@ def _reconstruct_cow_events(
 ) -> tuple[list[CowEvent], list[CowBatch], dict]:
     raw_batches: list[dict] = []
     current_batch = None
-    orphans = {"c3": 0, "e2": 0, "e0": 0, "e3": 0}
+    orphans = {"c3": 0, "e2": 0, "e0": 0, "e3": 0, "suppressed_noise": 0, "suppressed_retained_state": 0}
 
     for marker_row in marker_rows:
         marker = marker_row["marker"]
@@ -709,7 +851,7 @@ def _reconstruct_cow_events(
             continue
 
         if marker == "E2":
-            target = _pick_e2_target(current_batch)
+            target = _pick_e2_target(current_batch, marker_row)
             if target is None:
                 orphans["e2"] += 1
                 continue
@@ -748,14 +890,24 @@ def _reconstruct_cow_events(
     event_windows = _build_event_windows(raw_batches)
     assigned_samples, ambiguous_counts, batch_assigned, batch_ambiguous = _assign_flow_samples(event_windows, flow_samples)
 
-    cow_events = []
+    finalized_events = []
     for batch_index, batch in enumerate(raw_batches):
         next_batch = raw_batches[batch_index + 1] if batch_index + 1 < len(raw_batches) else None
         ordered_raw_events = sorted(batch["events"], key=lambda item: (item["slot_index"], item["c2_ts_ms"]))
         for raw_event in ordered_raw_events:
-            cow_events.append(
+            finalized_events.append(
                 _finalize_cow_event(raw_event, batch, next_batch, assigned_samples, ambiguous_counts)
             )
+
+    cow_events = []
+    for event in finalized_events:
+        if _is_noise_event(event):
+            orphans["suppressed_noise"] += 1
+            continue
+        if _is_retained_state_event(event):
+            orphans["suppressed_retained_state"] += 1
+            continue
+        cow_events.append(event)
 
     cow_batches = _build_cow_batches(raw_batches, cow_events, flow_samples, batch_assigned, batch_ambiguous)
     return cow_events, cow_batches, orphans
@@ -830,6 +982,9 @@ def parse_serial_text(text: str) -> dict:
     channel_counts = Counter(frame.channel for frame in frames)
     marker_counts = Counter(marker["marker"] for marker in marker_rows)
     status_counts = Counter(event.status for event in cow_events)
+    identity_counts = Counter(event.identity_status for event in cow_events)
+    confidence_counts = Counter(event.parser_confidence_label for event in cow_events)
+    confidence_values = [event.parser_confidence_score for event in cow_events]
     ambiguous_flow_sample_count = sum(event.ambiguous_flow_sample_count for event in cow_events)
     events_with_ambiguous_flow = sum(1 for event in cow_events if event.ambiguous_flow_sample_count > 0)
     prep_phase_event_count = sum(
@@ -837,6 +992,7 @@ def parse_serial_text(text: str) -> dict:
     )
     cadence_aligned_count = sum(1 for event in cow_events if event.cadence_aligned)
     cadence_steps = Counter(event.cadence_step_index for event in cow_events if event.cadence_aligned and event.cadence_step_index > 0)
+    retained_state_suspected_count = sum(1 for event in cow_events if event.retained_state_suspected)
 
     return {
         "total_events": len(frames),
@@ -871,6 +1027,13 @@ def parse_serial_text(text: str) -> dict:
         "cow_partial_count": status_counts.get("partial", 0),
         "cow_missing_rfid_count": status_counts.get("missing_rfid", 0),
         "cow_missing_flow_count": status_counts.get("missing_flow", 0),
+        "identity_confirmed_count": identity_counts.get("confirmed", 0),
+        "identity_probable_count": identity_counts.get("probable", 0),
+        "identity_unconfirmed_count": identity_counts.get("unconfirmed", 0),
+        "parser_confidence_average": round(sum(confidence_values) / len(confidence_values), 3) if confidence_values else 0.0,
+        "parser_confidence_high_count": confidence_counts.get("high", 0),
+        "parser_confidence_medium_count": confidence_counts.get("medium", 0),
+        "parser_confidence_low_count": confidence_counts.get("low", 0),
         "cow_ambiguous_flow_sample_count": ambiguous_flow_sample_count,
         "cow_events_with_ambiguous_flow_count": events_with_ambiguous_flow,
         "cow_prep_phase_count": prep_phase_event_count,
@@ -878,6 +1041,9 @@ def parse_serial_text(text: str) -> dict:
         "cow_cadence_dominant_step": cadence_steps.most_common(1)[0][0] if cadence_steps else 0,
         "merged_c2_count": sum(max(0, event.c2_count - 1) for event in cow_events),
         "multi_c2_event_count": sum(1 for event in cow_events if event.c2_count > 1),
+        "suppressed_noise_event_count": orphan_counts.get("suppressed_noise", 0),
+        "suppressed_retained_state_event_count": orphan_counts.get("suppressed_retained_state", 0),
+        "retained_state_suspected_count": retained_state_suspected_count,
         "orphans": orphan_counts,
         "coverage": coverage,
         "events": [frame.to_dict() for frame in frames],
