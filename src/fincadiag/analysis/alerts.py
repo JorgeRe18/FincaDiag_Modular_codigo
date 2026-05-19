@@ -1,11 +1,12 @@
 from collections import Counter
 import json
-import os
 from pathlib import Path
+
+from fincadiag.config import PROJECT_ROOT
 
 
 def _load_known_hosts() -> dict:
-    candidate = Path(__file__).parent.parent.parent.parent.parent / "data" / "network" / "known_hosts.json"
+    candidate = PROJECT_ROOT / "data" / "network" / "known_hosts.json"
     if not candidate.exists():
         candidate = Path("data/network/known_hosts.json")
     if candidate.exists():
