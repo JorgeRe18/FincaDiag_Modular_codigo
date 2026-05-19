@@ -53,6 +53,7 @@ def empty_field_validation_summary() -> dict:
         "controller_intervention_count": 0,
         "controller_stale_read_count": 0,
         "mastitis_count": 0,
+        "calostrum_count": 0,
         "controller_celo_count": 0,
         "controller_e56_count": 0,
         "controller_e59_count": 0,
@@ -69,6 +70,7 @@ def empty_field_validation_summary() -> dict:
         "semantic_manual_override_suspected_count": 0,
         "semantic_photocell_failure_suspected_count": 0,
         "semantic_controller_alarm_count": 0,
+        "semantic_calostrum_count": 0,
         "semantic_normal_milking_flow_count": 0,
         "semantic_case_counts": {},
         "semantic_primary_case": "",
@@ -230,8 +232,22 @@ def _normalize_time_value(value: str, default_period: str = "") -> str:
 
 
 def _normalize_decimal(value: str) -> float | None:
-    text = _normalize_docx_text(value).replace(",", ".")
-    match = re.search(r"(\d+(?:\.\d+)?)", text)
+    text = _normalize_docx_text(value)
+    if not text:
+        return None
+    normalized = re.sub(r"(?<=\d)\s*[\.,]\s*(?=\d)", ".", text)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    patterns = [
+        r"(\d+(?:\.\d+)?)\s*(?:litros?\b|l\b)",
+        r"(?:produjo|extrai[dt]a fue de|fue de)\s*(\d+(?:\.\d+)?)",
+        r"cantidad\s+de\s+leche.*?(\d+(?:\.\d+)?)",
+    ]
+    match = None
+    for pattern in patterns:
+        match = re.search(pattern, normalized, flags=re.IGNORECASE)
+        if match:
+            break
     if not match:
         return None
     try:
@@ -489,6 +505,7 @@ def _build_enriched_records(rows: list[dict], visit_date: date, capture_start_dt
         )
         enriched_row["low_production_suspected"] = "baja produccion" in observation_normalized
         enriched_row["mastitis_flag"] = "mastitis" in observation_normalized
+        enriched_row["calostrum_flag"] = "prob calo" in observation_normalized or "calostro" in observation_normalized
         enriched_row["controller_celo_flag"] = "celo" in observation_normalized
         enriched_row["controller_e56_flag"] = "E56" in controller_error_codes
         enriched_row["controller_e59_flag"] = "E59" in controller_error_codes
@@ -547,6 +564,8 @@ def _infer_semantic_record(row: dict) -> dict:
         semantic_case_type = "flow_uncertain"
     elif row.get("low_production_suspected"):
         semantic_case_type = "low_production_suspected"
+    elif row.get("calostrum_flag"):
+        semantic_case_type = "calostrum_observed"
     elif row.get("mastitis_flag"):
         semantic_case_type = "mastitis_observed"
     elif row.get("controller_celo_flag"):
@@ -582,6 +601,8 @@ def _infer_semantic_record(row: dict) -> dict:
         inferred_state_sequence.append("low_production_suspected")
     if row.get("mastitis_flag"):
         inferred_state_sequence.append("mastitis_observed")
+    if row.get("calostrum_flag"):
+        inferred_state_sequence.append("calostrum_observed")
     if row.get("controller_celo_flag"):
         inferred_state_sequence.append("celo_observed")
     if row.get("exit_dt") is not None:
@@ -639,6 +660,7 @@ def _summarize_semantic_records(records: list[dict]) -> dict:
         "semantic_manual_override_suspected_count": sum(1 for row in records if row.get("manual_override_suspected")),
         "semantic_photocell_failure_suspected_count": sum(1 for row in records if row.get("photocell_failure_suspected")),
         "semantic_controller_alarm_count": sum(1 for row in records if row.get("controller_alarm_present")),
+        "semantic_calostrum_count": sum(1 for row in records if row.get("semantic_case_type") == "calostrum_observed"),
         "semantic_normal_milking_flow_count": sum(1 for row in records if row.get("semantic_case_type") == "normal_milking_flow"),
         "semantic_case_counts": dict(sorted(case_counter.items())),
         "semantic_primary_case": case_counter.most_common(1)[0][0] if case_counter else "",
@@ -734,6 +756,7 @@ def build_field_validation_summary(session: dict, capture_dir: Path, serial: dic
             "stale_milk_measurement": row.get("stale_milk_measurement", False),
             "low_production_suspected": row.get("low_production_suspected", False),
             "mastitis_flag": row.get("mastitis_flag", False),
+            "calostrum_flag": row.get("calostrum_flag", False),
             "controller_celo_flag": row.get("controller_celo_flag", False),
             "controller_e56_flag": row.get("controller_e56_flag", False),
             "controller_e59_flag": row.get("controller_e59_flag", False),
@@ -806,6 +829,7 @@ def build_field_validation_summary(session: dict, capture_dir: Path, serial: dic
             "stale_milk_measurement_count": sum(1 for row in records_in_window if row.get("stale_milk_measurement")),
             "low_production_suspected_count": sum(1 for row in records_in_window if row.get("low_production_suspected")),
             "mastitis_count": sum(1 for row in records_in_window if row.get("mastitis_flag")),
+            "calostrum_count": sum(1 for row in records_in_window if row.get("calostrum_flag")),
             "controller_celo_count": sum(1 for row in records_in_window if row.get("controller_celo_flag")),
             "controller_e56_count": sum(1 for row in records_in_window if row.get("controller_e56_flag")),
             "controller_e59_count": sum(1 for row in records_in_window if row.get("controller_e59_flag")),

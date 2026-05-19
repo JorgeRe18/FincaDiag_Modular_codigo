@@ -92,6 +92,10 @@ class CowEvent:
     flow_start_timestamp: str = ""
     flow_end_timestamp: str = ""
     rfid_read_count: int = 0
+    identity_status: str = "unconfirmed"
+    parser_confidence_score: float = 0.0
+    parser_confidence_label: str = "low"
+    retained_state_suspected: bool = False
     notes: list[str] | None = None
 
     def to_dict(self):

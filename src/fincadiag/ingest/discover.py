@@ -67,7 +67,7 @@ def _collect_candidate_baselines(capture_dir: Path, search_root: Path) -> list[t
     while True:
         if current.exists():
             for child in current.iterdir():
-                if is_baseline_dir(child):
+                if is_baseline_dir(child) and has_baseline_files(child):
                     candidates.append((child, depth))
 
         if current == search_root or current.parent == current:
@@ -80,6 +80,13 @@ def _collect_candidate_baselines(capture_dir: Path, search_root: Path) -> list[t
         depth += 1
 
     return candidates
+
+
+def infer_single_session_search_root(sample_path: Path) -> Path:
+    for parent in [sample_path.parent, *sample_path.parents]:
+        if parent.name.startswith("Visita_"):
+            return parent
+    return sample_path.parent
 
 
 def find_nearest_baseline(capture_dir: Path, search_root: Path) -> Path | None:
@@ -272,5 +279,5 @@ def discover_single_session(sample_path: Path) -> dict:
     if not has_capture_payload(sample_path):
         raise ValueError(f"La carpeta no contiene serial_hex.txt, antena_udp.txt, .etl ni captura.pcap/pcapng: {sample_path}")
 
-    search_root = sample_path.parent
+    search_root = infer_single_session_search_root(sample_path)
     return build_session(search_root, sample_path)

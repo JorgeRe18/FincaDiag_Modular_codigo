@@ -2474,8 +2474,10 @@ def process_session(session: dict, args) -> dict:
 
     print(f"[OK] Muestra procesada: {sample_name}")
     print(f"     Captura: {capture_dir}")
-    print(f"     Baseline pre: {baseline_pre if baseline_pre else 'No asociado'}")
-    print(f"     Baseline post: {baseline_post if baseline_post else 'No asociado'}")
+    baseline_pre_label = "No aplica (muestra baseline)" if session_type == "baseline_only" else "No asociado"
+    baseline_post_label = "No aplica (muestra baseline)" if session_type == "baseline_only" else "No asociado"
+    print(f"     Baseline pre: {baseline_pre if baseline_pre else baseline_pre_label}")
+    print(f"     Baseline post: {baseline_post if baseline_post else baseline_post_label}")
     print(f"     Baseline usado: {baseline_source if baseline_source else 'No asociado'}")
     print(f"     Tipo de sesion: {'Baseline-only' if session_type == 'baseline_only' else 'Captura'}")
     print(f"     Bloque: {block_label or 'Sin bloque'}")
@@ -2526,8 +2528,10 @@ def print_session_preview(session: dict) -> None:
     print(f"       bloque: {session.get('block_label', 'Sin bloque')}")
     print(f"       modo_operativo: {get_operation_mode_label(session.get('operation_mode', 'indeterminado'))}")
     print(f"       captura: {capture_dir}")
-    print(f"       baseline_pre: {baseline_pre if baseline_pre else 'No asociado'}")
-    print(f"       baseline_post: {baseline_post if baseline_post else 'No asociado'}")
+    baseline_pre_label = "No aplica (muestra baseline)" if session_type == "baseline_only" else "No asociado"
+    baseline_post_label = "No aplica (muestra baseline)" if session_type == "baseline_only" else "No asociado"
+    print(f"       baseline_pre: {baseline_pre if baseline_pre else baseline_pre_label}")
+    print(f"       baseline_post: {baseline_post if baseline_post else baseline_post_label}")
     print(f"       baseline_asociado: {baseline_source if baseline_source else 'No asociado'}")
     print(f"       serial: {'Si' if serial_path.exists() else 'No'}")
     print(f"       antena_udp: {'Si' if antenna_udp_path and antenna_udp_path.exists() else 'No'}")

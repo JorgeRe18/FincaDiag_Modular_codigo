@@ -1,1137 +1,1546 @@
 import json
-import re
 import sqlite3
-from datetime import date, datetime, timedelta
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from pathlib import Path
 
-# ── Dependencias opcionales ───────────────────────────────────────────────────
-try:
-    import statsmodels
-    _HAS_STATSMODELS = True
-except ImportError:
-    _HAS_STATSMODELS = False
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CONFIG Y TEMA
-# ─────────────────────────────────────────────────────────────────────────────
-# El dashboard esta pensado como vista ejecutiva del lote procesado, no como reemplazo del reporte tecnico.
 st.set_page_config(page_title="FincaDiag", layout="wide")
 
-GREEN  = "#27AE60"
+GREEN = "#27AE60"
 YELLOW = "#F4D03F"
 ORANGE = "#E67E22"
-RED    = "#E74C3C"
-BLUE   = "#2980B9"
-BG     = "#0d1a0d"
+RED = "#E74C3C"
+BLUE = "#2980B9"
+BG = "#0D1A0D"
+PANEL = "#16261B"
 
-st.markdown(f"""
+ETA_STRONG_THRESHOLD = 85.0
+ETA_PARTIAL_THRESHOLD = 60.0
+MULTICAST_ATTENTION_THRESHOLD = 15.0
+TIMING_ATTENTION_THRESHOLD_MS = 50.0
+
+st.markdown(
+    f"""
 <style>
-.stApp {{ background-color:{BG}; color:#e2f1ec; }}
-[data-testid="stSidebar"] {{ background-color:#09120e !important; border-right:1px solid #1c3b2b; }}
-.stTabs [aria-selected="true"] {{ color:{GREEN} !important; border-bottom-color:{GREEN} !important; }}
-
-/* KPI banner */
-.kpi-box {{
-    background:#1a2b1a; border-radius:10px; padding:14px 10px;
-    text-align:center; border-top:3px solid {GREEN}; height:100px;
-    display:flex; flex-direction:column; justify-content:center;
-    margin-bottom: 15px;
+.stApp {{ background-color: {BG}; color: #E9F5EE; }}
+[data-testid="stSidebar"] {{ background-color: #0A120D !important; border-right: 1px solid #21402B; }}
+.card {{
+    background: {PANEL};
+    border: 1px solid #21402B;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
 }}
-.kpi-val  {{ font-size:1.7em; font-weight:800; color:#fff; line-height:1.1; }}
-.kpi-lbl  {{ font-size:0.65rem; color:#8dae9d; text-transform:uppercase; letter-spacing:0.8px; margin-top:4px; }}
-.kpi-sub  {{ font-size:0.7rem; color:{GREEN}; margin-top:2px; }}
-
-/* KPI alertas */
-.kpi-red   {{ border-top-color:{RED}; }}
-.kpi-yellow{{ border-top-color:{YELLOW}; }}
-.kpi-blue  {{ border-top-color:{BLUE}; }}
-
-/* Assessment grid */
+.sec {{
+    background: {PANEL};
+    border-left: 4px solid {GREEN};
+    border-radius: 0 10px 10px 0;
+    padding: 8px 14px;
+    font-weight: 700;
+    margin: 16px 0 10px;
+}}
+.kpi {{
+    background: {PANEL};
+    border-radius: 12px;
+    border-top: 3px solid {GREEN};
+    padding: 14px;
+    text-align: center;
+    min-height: 104px;
+}}
+.kpi.warn {{ border-top-color: {YELLOW}; }}
+.kpi.alert {{ border-top-color: {RED}; }}
+.kpi.info {{ border-top-color: {BLUE}; }}
+.kpi-value {{ font-size: 1.8rem; font-weight: 800; color: white; }}
+.kpi-label {{ font-size: 0.72rem; color: #AFCDBB; text-transform: uppercase; margin-top: 4px; }}
+.kpi-sub {{ font-size: 0.75rem; color: #8FC6A1; margin-top: 4px; }}
 .grid-cell {{
-    display:inline-block; padding:5px 10px; border-radius:6px;
-    font-size:0.72rem; font-weight:700; margin:2px; min-width:68px; text-align:center;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin: 3px;
+    min-width: 74px;
+    text-align: center;
 }}
-.cell-green  {{ background:{GREEN}; color:#fff; }}
-.cell-yellow {{ background:{YELLOW}; color:#333; }}
-.cell-orange {{ background:{ORANGE}; color:#fff; }}
-.cell-red    {{ background:{RED}; color:#fff; }}
-
-/* Section header */
-.sec-hdr {{
-    background:#1a2b1a; border-left:4px solid {GREEN};
-    padding:7px 14px; border-radius:0 8px 8px 0;
-    font-weight:700; font-size:0.85rem; margin:18px 0 10px;
-    text-transform:uppercase; letter-spacing:0.5px; color:{GREEN};
-}}
-
-/* Visit card */
-.vcard {{
-    background:#1a2b1a; padding:14px; border-radius:10px;
-    border-left:5px solid {GREEN}; margin-bottom:8px; height:185px;
-    display:flex; flex-direction:column; justify-content:space-between;
-    align-items:center; text-align:center;
-}}
-.vname {{ font-size:0.7rem; color:#8dae9d; font-weight:700; text-transform:uppercase; }}
-.vval  {{ font-size:2em; font-weight:800; color:#fff; }}
-.vlbl  {{ font-size:0.6rem; letter-spacing:1px; text-transform:uppercase; }}
-.vsub  {{ font-size:0.65rem; color:#8dae9d; }}
-
-/* Legend */
-.leg-item {{ display:flex; align-items:center; gap:8px; font-size:0.78rem; color:#c2d9c8; margin-bottom:5px; }}
-.leg-dot  {{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }}
-
-.stButton>button {{
-    background:#1a2b1a; color:#fff; border:1px solid {GREEN};
-    width:100%; font-size:0.72rem;
-}}
-.stButton>button:hover {{ background:{GREEN}; }}
+.cell-green {{ background: {GREEN}; color: white; }}
+.cell-yellow {{ background: {YELLOW}; color: #1A1A1A; }}
+.cell-orange {{ background: {ORANGE}; color: white; }}
+.cell-red {{ background: {RED}; color: white; }}
+.leg-item {{ display: flex; align-items: center; gap: 8px; font-size: 0.80rem; color: #D6E7DD; margin-bottom: 6px; }}
+.leg-dot {{ width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# RUTAS
-# ─────────────────────────────────────────────────────────────────────────────
-_ROOT = Path(__file__).resolve().parents[3]
-BASE_DIR      = _ROOT if (_ROOT / "data").exists() else Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
+BASE_DIR = ROOT if (ROOT / "data").exists() else Path(__file__).resolve().parent
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
-DB_PATH       = BASE_DIR / "data" / "finca_muestras.db"
+DB_PATH = BASE_DIR / "data" / "finca_muestras.db"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DATOS
-# ─────────────────────────────────────────────────────────────────────────────
-def get_db() -> pd.DataFrame:
-    # La base consolidada sirve para metricas transversales que no siempre estan en los CSV por visita.
-    if not DB_PATH.exists():
-        return pd.DataFrame()
+
+def num(value) -> float:
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            if not conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='registro_muestras'"
-            ).fetchone():
-                return pd.DataFrame()
-            return pd.read_sql_query(
-                "SELECT * FROM registro_muestras ORDER BY fecha DESC, id_muestra ASC", conn
-            )
-    except Exception:
-        return pd.DataFrame()
-
-def load_visits(path: Path, label: str) -> pd.DataFrame:
-    p = path.with_name(f"{label}_visits.csv")
-    if not p.exists():
-        return pd.DataFrame()
-    df = pd.read_csv(p)
-    if "visit_name" in df.columns:
-        visit_dt = pd.to_datetime(
-            df["visit_name"]
-            .astype(str)
-            .str.replace("Visita_", "", regex=False),
-            format="%d_%m_%Y",
-            errors="coerce",
-        )
-        df = df.assign(_visit_dt=visit_dt).sort_values(
-            by=["_visit_dt", "visit_name"],
-            ascending=[True, True],
-            na_position="last",
-            kind="mergesort",
-        )
-        df = df.drop(columns=["_visit_dt"], errors="ignore").reset_index(drop=True)
-    return df
-
-def load_sessions(path: Path, label: str) -> pd.DataFrame:
-    p = path.with_name(f"{label}_sessions.csv")
-    if not p.exists():
-        return pd.DataFrame()
-    return pd.read_csv(p)
-
-def load_corr(path: Path, label: str) -> pd.DataFrame:
-    p = path.with_name(f"{label}_correlacion_global.csv")
-    if not p.exists():
-        return pd.DataFrame()
-    return pd.read_csv(p)
-
-def num(val) -> float:
-    try:
-        v = float(val)
-        return 0.0 if pd.isna(v) else v
+        parsed = float(value)
+        return 0.0 if pd.isna(parsed) else parsed
     except Exception:
         return 0.0
 
 
-def format_visit_label(value: str, prefix: str = "V") -> str:
-    raw = str(value or "?")
-    raw = raw.replace("Visita_", "")
-    raw = re.sub(r"_\d{4}$", "", raw)
-    if prefix == "V":
-        return f"V{raw}" if raw else "V?"
-    if prefix == "Visita ":
-        return f"Visita {raw}" if raw else "Visita ?"
-    return raw if raw else "?"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CLASIFICACIÓN
-# ─────────────────────────────────────────────────────────────────────────────
-def classify(eta: float) -> str:
-    if eta >= 85:   return "cubierto"
-    elif eta >= 60: return "parcial_ok"
-    elif eta > 0:   return "parcial"
-    else:           return "no_cubierto"
-
-CAT_CSS   = {"cubierto":"cell-green","parcial_ok":"cell-yellow","parcial":"cell-orange","no_cubierto":"cell-red"}
-CAT_COLOR = {"cubierto":GREEN,"parcial_ok":YELLOW,"parcial":ORANGE,"no_cubierto":RED}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CHART HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
-DARK = dict(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#fff")
-
-def dark(fig, h=240):
-    fig.update_layout(**DARK, height=h, margin=dict(l=0,r=0,t=30,b=0))
+def dark(fig, height=280):
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font_color="#E9F5EE",
+        height=height,
+        margin=dict(l=0, r=0, t=40, b=0),
+    )
     return fig
 
-# ─────────────────────────────────────────────────────────────────────────────
-# BANNER DE KPIs (Distribuido para evitar apuñamiento)
-# ─────────────────────────────────────────────────────────────────────────────
-def render_kpi_banner(visits_df: pd.DataFrame, db_df: pd.DataFrame, summary: dict):
-    st.markdown('<div class="sec-hdr">Indicadores clave del diagnóstico forense</div>', unsafe_allow_html=True)
 
-    # Aqui se priorizan indicadores de lectura rapida para saber como viene el lote sin abrir cada visita.
-    eta_global  = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").mean()) if not visits_df.empty else 0.0
-    jitter_max  = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series()), errors="coerce").max()) if not db_df.empty else 71.3
-    plr_med     = num(pd.to_numeric(db_df.get("packet_loss", pd.Series()), errors="coerce").mean()) if not db_df.empty else 0.0
-    desfase_max = num(pd.to_numeric(db_df.get("desfase_max_ms", pd.Series()), errors="coerce").max()) if not db_df.empty else 87.95
-    multicast   = num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series()), errors="coerce").mean()) if not visits_df.empty else 0.0
-    total_sess  = int(summary.get("total_sessions", 0) or 0)
-    total_vis   = int(summary.get("total_visits", 0) or 0)
-    alertas_al  = int(summary.get("total_alertas_altas", 0) or 0)
-    alertas_cr  = int(summary.get("total_alertas_criticas", 0) or 0)
+def classify_eta(eta: float) -> str:
+    if eta >= ETA_STRONG_THRESHOLD:
+        return "Fuerte"
+    if eta >= ETA_PARTIAL_THRESHOLD:
+        return "Parcial"
+    if eta > 0:
+        return "Débil"
+    return "Sin cobertura"
 
-    # Definir todos los KPIs
-    kpis = [
-        ("η línea base",     "0.55%",          "sin gateway",       ""),
-        ("η actual",         f"{eta_global:.1f}%", "promedio visitas", "" if eta_global >= 85 else "kpi-red"),
-        ("Meta η",           "95%",             "objetivo TFG",      "kpi-blue"),
-        ("Jitter máx.",      f"{jitter_max:.1f} ms", "documentado",  "kpi-yellow" if jitter_max > 50 else ""),
-        ("Desfase máx.",     f"{desfase_max:.1f} ms", "serial↔red",  "kpi-yellow"),
-        ("Ruido UDP",        "43.29 Hz",        "sin filtrar",       "kpi-red"),
-        ("PLR medio",        f"{plr_med:.2f}%", "pérdida paquetes",  ""),
-        ("Multicast",        f"{multicast:.1f}%", "del tráfico",     "kpi-yellow" if multicast > 15 else ""),
-        ("Alertas altas",    str(alertas_al),   f"{alertas_cr} críticas", "kpi-red" if alertas_cr > 0 else ""),
-    ]
 
-    # Fila 1: 5 columnas
-    cols_top = st.columns(5)
-    for col, (lbl, val, sub, extra) in zip(cols_top, kpis[:5]):
-        with col:
-            st.markdown(f"""
-            <div class="kpi-box {extra}">
-                <div class="kpi-val">{val}</div>
-                <div class="kpi-lbl">{lbl}</div>
-                <div class="kpi-sub">{sub}</div>
-            </div>""", unsafe_allow_html=True)
+def eta_color(eta: float) -> str:
+    if eta >= ETA_STRONG_THRESHOLD:
+        return GREEN
+    if eta >= ETA_PARTIAL_THRESHOLD:
+        return YELLOW
+    if eta > 0:
+        return ORANGE
+    return RED
 
-    # Fila 2: 4 columnas
-    cols_bot = st.columns(4)
-    for col, (lbl, val, sub, extra) in zip(cols_bot, kpis[5:]):
-        with col:
-            st.markdown(f"""
-            <div class="kpi-box {extra}">
-                <div class="kpi-val">{val}</div>
-                <div class="kpi-lbl">{lbl}</div>
-                <div class="kpi-sub">{sub}</div>
-            </div>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ASSESSMENT DONUT + GRID
-# ─────────────────────────────────────────────────────────────────────────────
+def format_visit_label(value: str, prefix: str = "V") -> str:
+    raw = str(value or "?").replace("Visita_", "")
+    if prefix == "V":
+        return f"V{raw}"
+    if prefix:
+        return f"{prefix}{raw}"
+    return raw
+
+
+def visit_date_from_name(value: str) -> str:
+    raw = str(value or "").replace("Visita_", "")
+    parts = raw.split("_")
+    if len(parts) >= 3:
+        return f"{parts[0]}/{parts[1]}/{parts[2]}"
+    return ""
+
+
+def get_db() -> pd.DataFrame:
+    if not DB_PATH.exists():
+        return pd.DataFrame()
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            found = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='registro_muestras'"
+            ).fetchone()
+            if not found:
+                return pd.DataFrame()
+            return pd.read_sql_query(
+                "SELECT * FROM registro_muestras ORDER BY fecha DESC, id_muestra ASC",
+                conn,
+            )
+    except Exception:
+        return pd.DataFrame()
+
+
+def load_visits(run_path: Path, label: str) -> pd.DataFrame:
+    csv_path = run_path.with_name(f"{label}_visits.csv")
+    if not csv_path.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(csv_path)
+    if "visit_name" in df.columns:
+        visit_dt = pd.to_datetime(
+            df["visit_name"].astype(str).str.replace("Visita_", "", regex=False),
+            format="%d_%m_%Y",
+            errors="coerce",
+        )
+        df = (
+            df.assign(_visit_dt=visit_dt)
+            .sort_values(["_visit_dt", "visit_name"], na_position="last")
+            .drop(columns="_visit_dt")
+            .reset_index(drop=True)
+        )
+    return df
+
+
+@st.cache_data(show_spinner=False)
+def load_parsing_data(summary_path: Path, label: str) -> pd.DataFrame:
+    """Carga datos de calidad de parsing de todas las sesiones del lote.
+
+    Retorna DataFrame con métricas de parsing por sesión:
+    - sample_name: nombre de la sesión
+    - visit_name: nombre de la visita
+    - serial_available: si hay serial parseado
+    - serial_malformed_lines: líneas malformadas del serial
+    - serial_unparsed_lines: líneas no parseadas del serial
+    - serial_cow_event_count: eventos de vaca reconstruidos
+    - serial_cow_success_count: eventos exitosos
+    - pcap_available: si hay PCAP parseado
+    - pcap_parse_error: error de parseo de PCAP
+    - antenna_udp_available: si hay antena UDP parseado
+    - antenna_udp_malformed_lines: líneas malformadas de antena
+    - field_validation_available: si hay validación de campo
+    - parser_event_count: eventos de parser vs campo
+    - parser_coverage_rate_vs_field: cobertura del parser vs campo
+    - parser_missing_count_vs_field: eventos faltantes
+    - parser_excess_count_vs_field: eventos excesivos
+    - parser_event_delta_vs_field: delta parser vs campo
+    """
+    rows = []
+    visits_dir = BASE_DIR / "data" / "processed" / "visits"
+    if not visits_dir.exists():
+        return pd.DataFrame()
+
+    for visit_dir in visits_dir.iterdir():
+        if not visit_dir.is_dir() or not visit_dir.name.startswith("Visita_"):
+            continue
+        visit_name = visit_dir.name
+        sesiones_dir = visit_dir / "sesiones"
+        if not sesiones_dir.exists():
+            continue
+
+        for session_dir in sesiones_dir.iterdir():
+            if not session_dir.is_dir():
+                continue
+            sample_name = session_dir.name
+
+            row = {
+                "sample_name": sample_name,
+                "visit_name": visit_name,
+                "serial_available": False,
+                "serial_malformed_lines": 0,
+                "serial_unparsed_lines": 0,
+                "serial_cow_event_count": 0,
+                "serial_cow_success_count": 0,
+                "pcap_available": False,
+                "pcap_parse_error": "",
+                "antenna_udp_available": False,
+                "antenna_udp_malformed_lines": 0,
+                "field_validation_available": False,
+                "parser_event_count": 0,
+                "parser_coverage_rate_vs_field": 0.0,
+                "parser_missing_count_vs_field": 0,
+                "parser_excess_count_vs_field": 0,
+                "parser_event_delta_vs_field": 0,
+            }
+
+            # Cargar serial_summary.json
+            serial_path = session_dir / "serial_summary.json"
+            if serial_path.exists():
+                try:
+                    serial_data = json.loads(serial_path.read_text(encoding="utf-8"))
+                    row["serial_available"] = serial_data.get("available", False)
+                    row["serial_malformed_lines"] = serial_data.get("malformed_lines", 0)
+                    row["serial_unparsed_lines"] = len(serial_data.get("unparsed_lines", []))
+                    row["serial_cow_event_count"] = serial_data.get("cow_event_count", 0)
+                    row["serial_cow_success_count"] = serial_data.get("cow_success_count", 0)
+                except Exception:
+                    pass
+
+            # Cargar pcap_summary.json
+            pcap_path = session_dir / "pcap_summary.json"
+            if pcap_path.exists():
+                try:
+                    pcap_data = json.loads(pcap_path.read_text(encoding="utf-8"))
+                    row["pcap_available"] = pcap_data.get("available", False)
+                    row["pcap_parse_error"] = pcap_data.get("parse_error", "")
+                except Exception:
+                    pass
+
+            # Cargar antenna_udp_summary.json
+            antenna_path = session_dir / "antenna_udp_summary.json"
+            if antenna_path.exists():
+                try:
+                    antenna_data = json.loads(antenna_path.read_text(encoding="utf-8"))
+                    row["antenna_udp_available"] = antenna_data.get("available", False)
+                    row["antenna_udp_malformed_lines"] = antenna_data.get("malformed_lines", 0)
+                except Exception:
+                    pass
+
+            # Cargar field_validation_summary.json
+            field_path = session_dir / "field_validation_summary.json"
+            if field_path.exists():
+                try:
+                    field_data = json.loads(field_path.read_text(encoding="utf-8"))
+                    row["field_validation_available"] = field_data.get("available", False)
+                    row["parser_event_count"] = field_data.get("parser_event_count", 0)
+                    row["parser_coverage_rate_vs_field"] = field_data.get("parser_coverage_rate_vs_field", 0.0)
+                    row["parser_missing_count_vs_field"] = field_data.get("parser_missing_count_vs_field", 0)
+                    row["parser_excess_count_vs_field"] = field_data.get("parser_excess_count_vs_field", 0)
+                    row["parser_event_delta_vs_field"] = field_data.get("parser_event_delta_vs_field", 0)
+                except Exception:
+                    pass
+
+            rows.append(row)
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
+@st.cache_data(show_spinner=False)
+def load_visit_alerts(visit_name: str) -> pd.DataFrame:
+    """Carga todas las alertas detalladas (alerts.json) de las sesiones de una visita.
+
+    Usa la misma ruta canónica que el motor (cli.py:get_row_alerts_path):
+    data/processed/visits/{visit_name}/sesiones/{sample_id}/alerts.json
+    Retorna DataFrame con columnas: sample_name, alert_name, severity, layer,
+    evidence, impact, recommendation, timestamp, src_ip, dst_ip, port, protocol.
+    """
+    rows = []
+    sesiones = BASE_DIR / "data" / "processed" / "visits" / visit_name / "sesiones"
+    if not sesiones.exists():
+        return pd.DataFrame()
+    for session_dir in sesiones.iterdir():
+        if not session_dir.is_dir():
+            continue
+        alerts_path = session_dir / "alerts.json"
+        if not alerts_path.exists():
+            continue
+        try:
+            data = json.loads(alerts_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for alert in data.get("all", []):
+            rows.append({
+                "sample_name": session_dir.name,
+                "alert_name": alert.get("alert_name", ""),
+                "severity": alert.get("severity", ""),
+                "layer": alert.get("layer", ""),
+                "evidence": alert.get("evidence", ""),
+                "impact": alert.get("impact", ""),
+                "recommendation": alert.get("recommendation", ""),
+                "timestamp": alert.get("timestamp", ""),
+                "src_ip": alert.get("src_ip", ""),
+                "dst_ip": alert.get("dst_ip", ""),
+                "port": alert.get("port", ""),
+                "protocol": alert.get("protocol", ""),
+            })
+    return pd.DataFrame(rows)
+
+
+def load_corr(run_path: Path, label: str) -> pd.DataFrame:
+    csv_path = run_path.with_name(f"{label}_correlacion_global.csv")
+    if not csv_path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(csv_path)
+
+
+def available_runs() -> list[tuple[str, Path]]:
+    root = PROCESSED_DIR / "global" / "resumen_arbol"
+    if not root.exists():
+        return []
+    runs = []
+    for path in root.rglob("*_summary.json"):
+        rel_parts = {part.lower() for part in path.relative_to(root).parts}
+        if "old" in rel_parts:
+            continue
+        runs.append((path.stem.replace("_summary", ""), path))
+    return sorted(runs, reverse=True)
+
+
+def risk_level(row: pd.Series) -> str:
+    eta = num(row.get("avg_eta_extraccion", 0))
+    alerts_high = int(row.get("total_alertas_altas", 0) or 0)
+    alerts_crit = int(row.get("total_alertas_criticas", 0) or 0)
+    multicast = num(row.get("avg_multicast_pct", 0))
+    offset = num(row.get("avg_desfase_medio_ms", 0))
+    if alerts_crit > 0 or eta < ETA_PARTIAL_THRESHOLD:
+        return "Alto"
+    if alerts_high > 0 or multicast > MULTICAST_ATTENTION_THRESHOLD or offset > TIMING_ATTENTION_THRESHOLD_MS:
+        return "Medio"
+    return "Bajo"
+
+
+def eta_bucket_key(eta: float) -> str:
+    if eta >= ETA_STRONG_THRESHOLD:
+        return "strong"
+    if eta >= ETA_PARTIAL_THRESHOLD:
+        return "partial"
+    if eta > 0:
+        return "weak"
+    return "none"
+
+
+def eta_bucket_label(bucket: str) -> str:
+    return {
+        "strong": "Fuerte (η ≥ 85%)",
+        "partial": "Parcial (60-84.9%)",
+        "weak": "Débil (0-59.9%)",
+        "none": "Sin cobertura",
+    }.get(bucket, bucket)
+
+
+def eta_bucket_css(bucket: str) -> str:
+    return {
+        "strong": "cell-green",
+        "partial": "cell-yellow",
+        "weak": "cell-orange",
+        "none": "cell-red",
+    }.get(bucket, "cell-red")
+
+
+def eta_bucket_color(bucket: str) -> str:
+    return {
+        "strong": GREEN,
+        "partial": YELLOW,
+        "weak": ORANGE,
+        "none": RED,
+    }.get(bucket, RED)
+
+
+def parse_bool_series(values, length: int) -> pd.Series:
+    if isinstance(values, pd.Series):
+        lowered = values.astype(str).str.strip().str.lower()
+        return lowered.isin(["1", "true", "t", "yes", "si", "sí", "match", "matched"])
+    return pd.Series([bool(values)] * length, dtype=bool)
+
+
+def render_kpi(label: str, value: str, subtitle: str, tone: str = ""):
+    css = "kpi"
+    if tone:
+        css += f" {tone}"
+    st.markdown(
+        f"""
+<div class="{css}">
+  <div class="kpi-value">{value}</div>
+  <div class="kpi-label">{label}</div>
+  <div class="kpi-sub">{subtitle}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_header(summary: dict, visits_df: pd.DataFrame, db_df: pd.DataFrame, critical_alerts: int, high_alerts: int):
+    st.markdown('<div class="sec">Resumen del lote</div>', unsafe_allow_html=True)
+    eta_avg = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean())
+    jitter_max = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
+    offset_max = num(pd.to_numeric(db_df.get("desfase_max_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
+    multicast_avg = num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean())
+    field_sessions = int(summary.get("objective_1_characterization", {}).get("sessions_with_field_validation", 0) or 0)
+
+    cols = st.columns(5)
+    with cols[0]:
+        render_kpi("Visitas", str(int(summary.get("total_visits", 0) or 0)), "procesadas", "info")
+    with cols[1]:
+        render_kpi("Sesiones", str(int(summary.get("total_sessions", 0) or 0)), "en el lote", "info")
+    with cols[2]:
+        render_kpi("Eficiencia", f"{eta_avg:.1f}%", "correlación promedio", "" if eta_avg >= ETA_STRONG_THRESHOLD else "alert")
+    with cols[3]:
+        render_kpi("Jitter máx.", f"{jitter_max:.1f} ms", "SQL consolidado", "warn" if jitter_max > TIMING_ATTENTION_THRESHOLD_MS else "")
+    with cols[4]:
+        render_kpi("Val. campo", str(field_sessions), "sesiones con contraste", "info")
+
+    cols2 = st.columns(4)
+    with cols2[0]:
+        render_kpi("Desfase máx.", f"{offset_max:.1f} ms", "serial-red", "warn" if offset_max > TIMING_ATTENTION_THRESHOLD_MS else "")
+    with cols2[1]:
+        render_kpi("Multicast", f"{multicast_avg:.1f}%", "promedio del tráfico", "warn" if multicast_avg > MULTICAST_ATTENTION_THRESHOLD else "")
+    with cols2[2]:
+        render_kpi("Alertas altas", str(high_alerts), "conteo consolidado", "alert")
+    with cols2[3]:
+        render_kpi("Alertas críticas", str(critical_alerts), "conteo consolidado", "alert")
+
+
 def render_assessment(visits_df: pd.DataFrame):
-    st.markdown('<div class="sec-hdr">Cobertura η por visita</div>', unsafe_allow_html=True)
-
+    st.markdown('<div class="sec">Cobertura η por visita</div>', unsafe_allow_html=True)
     if visits_df.empty:
         st.info("No hay visitas para mostrar.")
         return
 
-    # Contar por categoría
-    cats = {"cubierto": 0, "parcial_ok": 0, "parcial": 0, "no_cubierto": 0}
-    for _, r in visits_df.iterrows():
-        cats[classify(num(r.get("avg_eta_extraccion", 0)))] += 1
-
-    total  = sum(cats.values()) or 1
-    pct_ok = round(cats["cubierto"] / total * 100)
-
-    left, right = st.columns([1, 2.8])
-
-    with left:
-        # Donut
-        fig_d = go.Figure(go.Pie(
-            labels=["Cubierto","Con obs.","Parcial","No cubierto"],
-            values=[cats["cubierto"], cats["parcial_ok"], cats["parcial"], cats["no_cubierto"]],
-            hole=0.62, marker_colors=[GREEN, YELLOW, ORANGE, RED],
-            textinfo="none",
-            hovertemplate="%{label}: %{value}<extra></extra>",
-        ))
-        fig_d.update_layout(
-            annotations=[dict(text=f"<b>{pct_ok}%</b>", x=0.5, y=0.5,
-                              font_size=26, font_color="#fff", showarrow=False)],
-            showlegend=False, **DARK, height=200,
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-        st.plotly_chart(fig_d, use_container_width=True)
-
-        # Leyenda
-        for color, n_val, lbl in [
-            (GREEN,  cats["cubierto"],    "Cubierto (η ≥ 85%)"),
-            (YELLOW, cats["parcial_ok"],  "Con observaciones"),
-            (ORANGE, cats["parcial"],     "Parcial (η > 0%)"),
-            (RED,    cats["no_cubierto"], "No cubierto"),
-        ]:
-            st.markdown(f"""
-            <div class="leg-item">
-                <div class="leg-dot" style="background:{color}"></div>
-                <b style="color:{color}; min-width:18px">{n_val}</b> {lbl}
-            </div>""", unsafe_allow_html=True)
-
-    with right:
-        # Grilla de celdas
-        cells = []
-        for _, r in visits_df.iterrows():
-            eta    = num(r.get("avg_eta_extraccion", 0))
-            cat    = classify(eta)
-            css    = CAT_CSS[cat]
-            nombre = format_visit_label(r.get("visit_name", "?"), prefix="V")
-            tip    = f"η={eta:.1f}%"
-            cells.append(f'<span class="grid-cell {css}" title="{tip}">{nombre}</span>')
-
-        rows_html = []
-        for i in range(0, len(cells), 6):
-            rows_html.append('<div style="margin-bottom:4px;">' + "".join(cells[i:i+6]) + '</div>')
-        st.markdown("\n".join(rows_html), unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MODAL EMERGENTE DE VISITA
-# ─────────────────────────────────────────────────────────────────────────────
-@st.dialog("Análisis Detallado del Nodo", width="large")
-def show_visit_details(r):
-    nombre = format_visit_label(r.get("visit_name", "?"), prefix="Visita ")
-    eta    = num(r.get("avg_eta_extraccion", 0))
-    alts   = int(r.get("total_alertas_altas", 0) or 0)
-    crit   = int(r.get("total_alertas_criticas", 0) or 0)
-    mc_v   = num(r.get("avg_multicast_pct", 0))
-    def_v  = num(r.get("avg_desfase_medio_ms", 0))
-    
-    st.markdown(f"### 📍 {nombre}")
-    st.markdown("---")
-    
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Eficiencia η", f"{eta:.1f}%", "-Crítico" if eta < 85 else "Óptimo", delta_color="inverse" if eta < 85 else "normal")
-    m2.metric("Tasa Multicast", f"{mc_v:.1f}%", f"+{mc_v - 15:.1f}% sobre límite" if mc_v > 15 else "Normal", delta_color="inverse")
-    m3.metric("Desfase Medio", f"{def_v:.1f} ms", f"+{def_v - 50:.1f} ms riesgo" if def_v > 50 else "Estable", delta_color="inverse")
-    m4.metric("Alertas Críticas", crit, f"{alts} Alertas Altas", delta_color="inverse" if crit > 0 or alts > 0 else "normal")
-
-    st.markdown("---")
-    st.markdown("**Composición de sesiones**")
-    
-    sess = int(r.get("total_sessions", 0) or 0)
-    pcaps = int(r.get("sessions_with_pcap", 0) or 0)
-    ser = int(r.get("sessions_with_serial", 0) or 0)
-    ant = int(r.get("sessions_with_antenna_udp", 0) or 0)
-    
-    # Un pequeño DataFrame renderizado para que sea claro el contexto sin llenar de texto
-    df_detalle = pd.DataFrame(
-        {
-            "Métrica": [
-                "Sesiones totales",
-                "Capturas PCAP",
-                "Sesiones con serial (DB9)",
-                "Sesiones con antena UDP",
-            ],
-            "Valor": [sess, pcaps, ser, ant],
-        }
-    )
-    st.dataframe(df_detalle, hide_index=True, use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("**Distribución**")
-    df_vis = pd.DataFrame({
-        "Tipo": ["PCAP", "Serial", "Collar"],
-        "Sesiones": [pcaps, ser, ant]
-    })
-    fig_m = px.bar(df_vis, x="Tipo", y="Sesiones",
-                   color="Tipo",
-                   color_discrete_sequence=[BLUE, GREEN, YELLOW])
-    fig_m.update_layout(**DARK, height=200, margin=dict(l=0,r=0,t=10,b=0), showlegend=False)
-    st.plotly_chart(fig_m, use_container_width=True)
-
-    # Evaluación rápida
-    st.markdown("**Evaluación**")
-    if eta >= 95:
-        st.success(f"η={eta:.1f}% cumple la meta del TFG (≥95%)")
-    elif eta >= 85:
-        st.warning(f"η={eta:.1f}% es aceptable, pero no alcanza el 95%")
-    else:
-        st.error(f"η={eta:.1f}% está por debajo del umbral mínimo de 85%")
-    if mc_v > 15:
-        st.warning(f"Multicast {mc_v:.1f}% supera el umbral del 15% y puede estar afectando η")
-    if def_v > 71.3:
-        st.error(f"Desfase {def_v:.1f} ms supera el jitter máximo documentado (71.3 ms)")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# VISITA CARDS
-# ─────────────────────────────────────────────────────────────────────────────
-def render_visit_cards(visits_df: pd.DataFrame):
-    if visits_df.empty:
-        return
-    st.markdown('<div class="sec-hdr">Nodos de captura</div>', unsafe_allow_html=True)
-    n_cols = min(len(visits_df), 4)
-    cols   = st.columns(n_cols)
-    for i, (_, r) in enumerate(visits_df.iterrows()):
-        with cols[i % n_cols]:
-            eta   = num(r.get("avg_eta_extraccion", 0))
-            sess  = int(r.get("total_sessions", 0) or 0)
-            alts  = int(r.get("total_alertas_altas", 0) or 0)
-            pcaps = int(r.get("sessions_with_pcap", 0) or 0)
-            ser   = int(r.get("sessions_with_serial", 0) or 0)
-            bc    = CAT_COLOR[classify(eta)]
-            nombre= format_visit_label(r.get("visit_name", "?"), prefix="")
-            
-            st.markdown(f"""
-            <div class="vcard" style="border-left-color:{bc};">
-                <div class="vname">{nombre}</div>
-                <div class="vval" style="color:{bc};">{eta:.1f}%</div>
-                <div class="vlbl" style="color:{bc};">Eficiencia η</div>
-                <div class="vsub">{sess} ses. · {pcaps} PCAP · {ser} serial</div>
-                <div class="vsub" style="color:{'#E74C3C' if alts>0 else '#8dae9d'};">
-                    {'⚠ ' + str(alts) + ' alertas' if alts > 0 else '✓ Sin alertas'}
-                </div>
-            </div>""", unsafe_allow_html=True)
-            
-            if st.button("Ver detalle", key=f"btn_{r.get('visit_name',i)}"):
-                show_visit_details(r)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TENDENCIA TEMPORAL DE η
-# ─────────────────────────────────────────────────────────────────────────────
-def render_eta_trend(visits_df: pd.DataFrame):
-    if visits_df.empty or "avg_eta_extraccion" not in visits_df.columns:
-        return
-    st.markdown('<div class="sec-hdr">Tendencia de eficiencia η por visita</div>', unsafe_allow_html=True)
     df = visits_df.copy()
-    df["eta"]    = pd.to_numeric(df["avg_eta_extraccion"], errors="coerce")
-    df["visita"] = df["visit_name"].astype(str).map(lambda x: format_visit_label(x, prefix="V"))
-    df["desfase"]= pd.to_numeric(df.get("avg_desfase_medio_ms", pd.Series(0)), errors="coerce").fillna(0)
+    df["eta"] = pd.to_numeric(df.get("avg_eta_extraccion", 0), errors="coerce").fillna(0)
+    buckets = df["eta"].map(eta_bucket_key)
+    counts = {
+        "strong": int((buckets == "strong").sum()),
+        "partial": int((buckets == "partial").sum()),
+        "weak": int((buckets == "weak").sum()),
+        "none": int((buckets == "none").sum()),
+    }
+    total = max(1, len(df))
+    pct_strong = round(100.0 * counts["strong"] / total)
 
-    c1, c2 = st.columns(2)
-
+    c1, c2 = st.columns([1, 2.4])
     with c1:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df["visita"], y=df["eta"], mode="lines+markers",
-            line=dict(color=GREEN, width=2.5),
-            marker=dict(size=9, color=[CAT_COLOR[classify(e)] for e in df["eta"].fillna(0)]),
-            name="η (%)",
-        ))
-        fig.add_hline(y=95, line_dash="dash", line_color=YELLOW,
-                      annotation_text="Meta 95%", annotation_font_color=YELLOW)
-        fig.add_hline(y=0.55, line_dash="dot", line_color=RED,
-                      annotation_text="Línea base 0.55%", annotation_font_color=RED)
-        fig.update_layout(**DARK, height=240, margin=dict(l=0,r=0,t=30,b=0),
-                          xaxis=dict(tickangle=-30), yaxis=dict(title="η (%)"),
-                          title="η por visita vs meta TFG")
-        st.plotly_chart(fig, use_container_width=True)
-
-    with c2:
-        # Desfase temporal por visita
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(
-            x=df["visita"], y=df["desfase"],
-            marker_color=[RED if d > 71.3 else YELLOW if d > 30 else GREEN for d in df["desfase"].fillna(0)],
-            name="Desfase medio (ms)",
-        ))
-        fig2.add_hline(y=71.3, line_dash="dash", line_color=RED,
-                       annotation_text="Jitter máx. documentado", annotation_font_color=RED)
-        fig2.update_layout(**DARK, height=240, margin=dict(l=0,r=0,t=30,b=0),
-                           xaxis=dict(tickangle=-30), yaxis=dict(title="ms"),
-                           title="Desfase serial↔red por visita")
-        st.plotly_chart(fig2, use_container_width=True)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# GAUGE η ACTUAL VS META
-# ─────────────────────────────────────────────────────────────────────────────
-def render_eta_gauge(visits_df: pd.DataFrame):
-    if visits_df.empty:
-        return
-    eta_global = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").mean())
-    eta_max    = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").max())
-    eta_min    = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").min())
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        fig_g = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=eta_global,
-            delta={"reference": 0.55, "increasing": {"color": GREEN},
-                   "decreasing": {"color": RED}, "suffix": "%"},
-            title={"text": "η promedio actual", "font": {"color": "#fff", "size": 13}},
-            number={"suffix": "%", "font": {"color": "#fff", "size": 28}},
-            gauge={
-                "axis": {"range": [0, 100], "tickcolor": "#8dae9d", "tickfont": {"color": "#8dae9d"}},
-                "bar": {"color": GREEN},
-                "bgcolor": "#1a2b1a",
-                "bordercolor": "#1a2b1a",
-                "steps": [
-                    {"range": [0, 30],  "color": "#2d1010"},
-                    {"range": [30, 60], "color": "#2d2010"},
-                    {"range": [60, 85], "color": "#2d2d10"},
-                    {"range": [85, 100],"color": "#102d10"},
-                ],
-                "threshold": {
-                    "line": {"color": YELLOW, "width": 3},
-                    "thickness": 0.85,
-                    "value": 95,
-                },
-            },
-        ))
-        fig_g.update_layout(**DARK, height=220, margin=dict(l=20,r=20,t=40,b=10))
-        st.plotly_chart(fig_g, use_container_width=True)
-
-    with c2:
-        fig_g2 = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=eta_max,
-            title={"text": "η máximo alcanzado", "font": {"color": "#fff", "size": 13}},
-            number={"suffix": "%", "font": {"color": "#fff", "size": 28}},
-            gauge={
-                "axis": {"range": [0, 100], "tickcolor": "#8dae9d", "tickfont": {"color": "#8dae9d"}},
-                "bar": {"color": BLUE},
-                "bgcolor": "#1a2b1a",
-                "bordercolor": "#1a2b1a",
-                "steps": [
-                    {"range": [0, 85],  "color": "#101a2d"},
-                    {"range": [85, 100],"color": "#102d10"},
-                ],
-                "threshold": {"line": {"color": YELLOW, "width": 3}, "thickness": 0.85, "value": 95},
-            },
-        ))
-        fig_g2.update_layout(**DARK, height=220, margin=dict(l=20,r=20,t=40,b=10))
-        st.plotly_chart(fig_g2, use_container_width=True)
-
-    with c3:
-        # Mini tabla de resumen estadístico
-        st.markdown("**Estadísticas de η**")
-        etas = pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce").dropna()
-        if not etas.empty:
-            stats = pd.DataFrame({
-                "Métrica": ["Mínimo", "Media", "Mediana", "Máximo", "Desv. estándar", "Vs meta 95%"],
-                "Valor": [
-                    f"{etas.min():.2f}%",
-                    f"{etas.mean():.2f}%",
-                    f"{etas.median():.2f}%",
-                    f"{etas.max():.2f}%",
-                    f"±{etas.std():.2f}%",
-                    f"{etas.mean() - 95:.2f}pp",
-                ]
-            })
-            st.dataframe(stats, hide_index=True, use_container_width=True, height=240)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# THREAT PANEL
-# ─────────────────────────────────────────────────────────────────────────────
-def render_threat_panel(visits_df: pd.DataFrame, db_df: pd.DataFrame):
-    st.markdown('<div class="sec-hdr">Panel de amenazas y riesgos de red</div>', unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns(3)
-
-    # ── Alertas por visita (stacked bar) ─────────────────────────────────────
-    with c1:
-        st.markdown("**Estado de alertas por visita**")
-        if not visits_df.empty:
-            df  = visits_df.copy()
-            nom = df["visit_name"].astype(str).map(lambda x: format_visit_label(x, prefix="V"))
-            fig = go.Figure()
-            for col, color, lbl in [
-                ("total_alertas_criticas", RED,    "Críticas"),
-                ("total_alertas_altas",    ORANGE, "Altas"),
-            ]:
-                vals = pd.to_numeric(df.get(col, pd.Series(0)), errors="coerce").fillna(0)
-                fig.add_trace(go.Bar(name=lbl, x=nom, y=vals, marker_color=color))
-            fig.update_layout(**DARK, barmode="stack", height=230,
-                              margin=dict(l=0,r=0,t=10,b=0),
-                              legend=dict(orientation="h", y=1.1, font_size=9),
-                              xaxis=dict(tickangle=-35, tickfont_size=9))
-            st.plotly_chart(fig, use_container_width=True)
-
-    # ── Distribución de riesgo (donut) ────────────────────────────────────────
-    with c2:
-        st.markdown("**Distribución de riesgo actual**")
-        if not visits_df.empty:
-            etas = pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(0)), errors="coerce").fillna(0)
-            rk   = {
-                "No cubierto (η<30%)":  int((etas < 30).sum()),
-                "Parcial (30-60%)":     int(((etas >= 30) & (etas < 60)).sum()),
-                "Elevado (60-85%)":     int(((etas >= 60) & (etas < 85)).sum()),
-                "Cubierto (≥85%)":      int((etas >= 85).sum()),
-            }
-            total  = sum(rk.values()) or 1
-            pct_ok = round(rk["Cubierto (≥85%)"] / total * 100)
-            fig_p  = go.Figure(go.Pie(
-                labels=list(rk.keys()), values=list(rk.values()),
-                hole=0.6, marker_colors=[RED, ORANGE, YELLOW, GREEN],
+        fig = go.Figure(
+            go.Pie(
+                labels=[eta_bucket_label(key) for key in ["strong", "partial", "weak", "none"]],
+                values=[counts[key] for key in ["strong", "partial", "weak", "none"]],
+                hole=0.62,
+                marker_colors=[GREEN, YELLOW, ORANGE, RED],
                 textinfo="none",
                 hovertemplate="%{label}: %{value}<extra></extra>",
-            ))
-            fig_p.update_layout(
-                annotations=[dict(text=f"<b>{pct_ok}%</b>", x=0.5, y=0.5,
-                                  font_size=22, font_color="#fff", showarrow=False)],
-                **DARK, height=230, showlegend=True,
-                legend=dict(orientation="v", font_size=9, x=1),
-                margin=dict(l=0, r=80, t=10, b=0),
             )
-            st.plotly_chart(fig_p, use_container_width=True)
-
-    # ── Exposición por categoría de amenaza ────────────────────────────────────
-    with c3:
-        st.markdown("**Exposición por vector de amenaza**")
-        if not visits_df.empty:
-            mc_alto = int((pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(0)), errors="coerce") > 15).sum())
-            def_alto= int((pd.to_numeric(visits_df.get("avg_desfase_medio_ms", pd.Series(0)), errors="coerce") > 50).sum())
-            crit    = int(pd.to_numeric(visits_df.get("total_alertas_criticas", pd.Series(0)), errors="coerce").sum())
-            alts    = int(pd.to_numeric(visits_df.get("total_alertas_altas", pd.Series(0)), errors="coerce").sum())
-            sin_ser = int((pd.to_numeric(visits_df.get("sessions_with_serial", pd.Series(0)), errors="coerce") == 0).sum())
-            cats    = {
-                "Sin cifrado UDP": len(visits_df),
-                "Broadcast/multicast alto": mc_alto,
-                "Jitter > 50 ms":  def_alto,
-                "Alertas críticas": crit,
-                "Alertas altas":    alts,
-                "Sin captura serial": sin_ser,
-            }
-            fig_h = go.Figure(go.Bar(
-                x=list(cats.values()), y=list(cats.keys()),
-                orientation="h",
-                marker_color=[RED, ORANGE, YELLOW, RED, ORANGE, YELLOW],
-                text=list(cats.values()), textposition="auto",
-            ))
-            fig_h.update_layout(**DARK, height=230, margin=dict(l=0,r=0,t=10,b=0),
-                                xaxis=dict(title=""))
-            st.plotly_chart(fig_h, use_container_width=True)
-
-    # ── Fila 2: scatter multicast vs η + tabla de riesgo ──────────────────────
-    c4, c5 = st.columns([1.3, 1])
-
-    with c4:
-        st.markdown("**Impacto multicast vs η extracción (trendline)**")
-        if not visits_df.empty:
-            mc  = pd.to_numeric(visits_df.get("avg_multicast_pct",  pd.Series()), errors="coerce")
-            eta = pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series()), errors="coerce")
-            nom = visits_df["visit_name"].astype(str).map(lambda x: format_visit_label(x, prefix="V"))
-            if mc.notna().any() and eta.notna().any():
-                df_sc = pd.DataFrame({"Multicast %": mc.fillna(0), "η (%)": eta.fillna(0), "Visita": nom})
-                fig_s = px.scatter(df_sc, x="Multicast %", y="η (%)", text="Visita",
-                                   trendline="ols" if _HAS_STATSMODELS else None, color_discrete_sequence=[GREEN])
-                fig_s.update_traces(marker_size=10, textfont_color="#fff", textposition="top center")
-                fig_s.add_hline(y=95, line_dash="dash", line_color=YELLOW,
-                                annotation_text="Meta 95%", annotation_font_color=YELLOW)
-                dark(fig_s, 260)
-                st.plotly_chart(fig_s, use_container_width=True)
-
-    with c5:
-        st.markdown("**Tabla de riesgo por visita**")
-        if not visits_df.empty:
-            rows = []
-            for _, r in visits_df.iterrows():
-                eta   = num(r.get("avg_eta_extraccion", 0))
-                alts  = int(r.get("total_alertas_altas", 0) or 0)
-                crit  = int(r.get("total_alertas_criticas", 0) or 0)
-                mc_v  = num(r.get("avg_multicast_pct", 0))
-                def_v = num(r.get("avg_desfase_medio_ms", 0))
-                if crit > 0 or eta < 30:
-                    nivel = "Alto"
-                elif alts > 2 or eta < 60:
-                    nivel = "Elevado"
-                elif alts > 0 or eta < 85:
-                    nivel = "Guarded"
-                else:
-                    nivel = "Bajo"
-                nombre = format_visit_label(r.get("visit_name", "?"), prefix="V")
-                rows.append({
-                    "Visita": nombre, "η (%)": f"{eta:.1f}",
-                    "Alertas": alts, "Críticas": crit,
-                    "Multicast %": f"{mc_v:.1f}", "Desfase (ms)": f"{def_v:.1f}",
-                    "Riesgo": nivel,
-                })
-            df_r = pd.DataFrame(rows)
-            color_map = {"Alto": RED, "Elevado": ORANGE, "Guarded": BLUE, "Bajo": GREEN}
-
-            def color_riesgo(val):
-                c = color_map.get(val, "#fff")
-                return f"color:{c}; font-weight:bold"
-
-            st.dataframe(
-                df_r.style.map(color_riesgo, subset=["Riesgo"]),
-                use_container_width=True, height=260, hide_index=True,
+        )
+        fig.update_layout(
+            annotations=[dict(text=f"<b>{pct_strong}%</b>", x=0.5, y=0.5, font_size=24, font_color="#E9F5EE", showarrow=False)],
+            showlegend=False,
+            margin=dict(l=0, r=0, t=0, b=0),
+            height=220,
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        for key in ["strong", "partial", "weak", "none"]:
+            st.markdown(
+                f'<div class="leg-item"><div class="leg-dot" style="background:{eta_bucket_color(key)}"></div><b>{counts[key]}</b> {eta_bucket_label(key)}</div>',
+                unsafe_allow_html=True,
             )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DISTRIBUCIÓN DE MUESTREO
-# ─────────────────────────────────────────────────────────────────────────────
-def render_sample_dist(summary: dict, visits_df: pd.DataFrame):
-    st.markdown('<div class="sec-hdr">Distribución de muestreo y cobertura</div>', unsafe_allow_html=True)
+    with c2:
+        cells = []
+        for _, row in df.iterrows():
+            eta = num(row.get("eta", 0))
+            bucket = eta_bucket_key(eta)
+            visit_label = format_visit_label(row.get("visit_name", "?"), "V")
+            cells.append(
+                f'<span class="grid-cell {eta_bucket_css(bucket)}" title="η={eta:.1f}%">{visit_label}</span>'
+            )
+        rows = []
+        for index in range(0, len(cells), 6):
+            rows.append("<div>" + "".join(cells[index:index + 6]) + "</div>")
+        st.markdown("".join(rows), unsafe_allow_html=True)
 
+
+def render_sampling(summary: dict, visits_df: pd.DataFrame):
+    st.markdown('<div class="sec">Distribución de muestreo y cobertura</div>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown("**Tipos de sesión**")
-        counts = summary.get("sample_type_counts", {})
-        if counts:
-            order  = ["SERIAL + PCAP","Antena + PCAP","PCAP + ETL","PCAP solo","Baseline","Otros"]
-            df_t   = pd.DataFrame([{"tipo": k, "cantidad": int(counts.get(k,0) or 0)} for k in order])
-            fig_b  = px.bar(df_t, x="tipo", y="cantidad", color_discrete_sequence=[GREEN])
-            dark(fig_b, 230)
-            fig_b.update_layout(xaxis_title="", yaxis_title="Sesiones")
-            st.plotly_chart(fig_b, use_container_width=True)
+        sample_counts = summary.get("sample_type_counts", {})
+        if sample_counts:
+            df = pd.DataFrame({"Tipo": list(sample_counts.keys()), "Sesiones": list(sample_counts.values())})
+            fig = px.bar(df, x="Tipo", y="Sesiones", color_discrete_sequence=[GREEN], title="Tipos de sesión")
+            fig.update_layout(xaxis_title="", yaxis_title="Sesiones")
+            st.plotly_chart(dark(fig, 260), use_container_width=True)
 
     with c2:
-        st.markdown("**Cobertura PCAP vs Serial por visita**")
         if not visits_df.empty:
-            nom   = visits_df["visit_name"].astype(str).map(lambda x: format_visit_label(x, prefix="V"))
-            pcap  = pd.to_numeric(visits_df.get("sessions_with_pcap",   pd.Series(0)), errors="coerce").fillna(0)
-            ser   = pd.to_numeric(visits_df.get("sessions_with_serial",  pd.Series(0)), errors="coerce").fillna(0)
-            collar= pd.to_numeric(visits_df.get("sessions_with_antenna_udp", pd.Series(0)), errors="coerce").fillna(0)
-            fig_l = go.Figure()
-            fig_l.add_trace(go.Bar(name="PCAP",   x=nom, y=pcap,   marker_color=BLUE))
-            fig_l.add_trace(go.Bar(name="Serial",  x=nom, y=ser,    marker_color=GREEN))
-            fig_l.add_trace(go.Bar(name="Collar",  x=nom, y=collar, marker_color=YELLOW))
-            fig_l.update_layout(**DARK, barmode="group", height=230,
-                                margin=dict(l=0,r=0,t=10,b=0),
-                                xaxis=dict(tickangle=-30, tickfont_size=9),
-                                legend=dict(orientation="h", y=1.1, font_size=9))
-            st.plotly_chart(fig_l, use_container_width=True)
+            df = pd.DataFrame(
+                {
+                    "Tipo": ["PCAP", "Serial", "Collar/Antena"],
+                    "Sesiones": [
+                        int(pd.to_numeric(visits_df.get("sessions_with_pcap", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+                        int(pd.to_numeric(visits_df.get("sessions_with_serial", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+                        int(pd.to_numeric(visits_df.get("sessions_with_antenna_udp", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+                    ],
+                }
+            )
+            fig = px.pie(df, names="Tipo", values="Sesiones", hole=0.55, color="Tipo", color_discrete_map={"PCAP": BLUE, "Serial": GREEN, "Collar/Antena": YELLOW}, title="Cobertura por dominio")
+            st.plotly_chart(dark(fig, 260), use_container_width=True)
 
     with c3:
-        st.markdown("**Cobertura de ordeño AM vs PM**")
         if not visits_df.empty:
-            # Estimar sesiones de ordeño vs normales desde los datos disponibles
-            total_s = pd.to_numeric(visits_df.get("total_sessions", pd.Series(0)), errors="coerce").fillna(0).sum()
-            serial_s= pd.to_numeric(visits_df.get("sessions_with_serial", pd.Series(0)), errors="coerce").fillna(0).sum()
-            normal_s= max(0, total_s - serial_s)
-            fig_pie = go.Figure(go.Pie(
-                labels=["Ordeño (con serial)", "Normal (sin serial)", "Baseline"],
-                values=[serial_s, normal_s,
-                        int(summary.get("total_sessions", 0) or 0) - int(total_s)],
-                hole=0.55, marker_colors=[GREEN, BLUE, "#555"],
-                textinfo="percent+label", textfont_size=9,
-            ))
-            fig_pie.update_layout(**DARK, height=230,
-                                  margin=dict(l=0,r=0,t=10,b=0),
-                                  showlegend=False)
-            st.plotly_chart(fig_pie, use_container_width=True)
+            field_visits = 0
+            if "sessions_with_field_validation" in visits_df.columns:
+                field_visits = int((pd.to_numeric(visits_df["sessions_with_field_validation"], errors="coerce").fillna(0) > 0).sum())
+            corr_visits = int((pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").fillna(0) > 0).sum())
+            baseline_only = max(0, len(visits_df) - max(field_visits, corr_visits))
+            df = pd.DataFrame(
+                {
+                    "Cobertura": ["Correlación", "Validación de campo", "Resto del lote"],
+                    "Visitas": [corr_visits, field_visits, baseline_only],
+                }
+            )
+            fig = px.bar(df, x="Cobertura", y="Visitas", color="Cobertura", color_discrete_sequence=[GREEN, BLUE, ORANGE], title="Contraste analítico disponible")
+            fig.update_layout(xaxis_title="", yaxis_title="Visitas")
+            st.plotly_chart(dark(fig, 260), use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TAB GENERAL COMPLETO
-# ─────────────────────────────────────────────────────────────────────────────
-def tab_general(label: str, path: Path, summary: dict):
-    visits_df = load_visits(path, label)
-    db_df     = get_db()
 
-    render_kpi_banner(visits_df, db_df, summary)
-    st.markdown("---")
-    render_assessment(visits_df)
-    st.markdown("---")
-    render_visit_cards(visits_df)
-    st.markdown("---")
-    render_eta_trend(visits_df)
-    st.markdown("---")
-    render_eta_gauge(visits_df)
-    st.markdown("---")
-    render_sample_dist(summary, visits_df)
-    st.markdown("---")
-    render_threat_panel(visits_df, db_df)
+def render_executive_panel(summary: dict, visits_df: pd.DataFrame, db_df: pd.DataFrame, critical_alerts: int, high_alerts: int):
+    """Panel ejecutivo consolidado - Estado de la Finca"""
+    st.markdown('<div class="sec">Panel Ejecutivo - Estado de la Finca</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TAB SINCRONÍA
-# ─────────────────────────────────────────────────────────────────────────────
-def tab_sincronia(label: str, path: Path):
-    st.subheader("Sincronía (Edge)")
-    df_s = load_corr(path, label)
-
-    if df_s.empty:
-        st.info("No hay datos de correlación para este lote.")
+    if not summary:
+        st.info("No hay datos de resumen disponibles.")
         return
 
-    x_col = "timestamp_serial" if "timestamp_serial" in df_s.columns else df_s.columns[0]
-    delta  = df_s["delta_ms"].abs() if "delta_ms" in df_s.columns else pd.Series()
+    # Extraer métricas clave del summary
+    total_visits = summary.get('total_visits', 0)
+    total_sessions = summary.get('total_sessions', 0)
+    sessions_with_pcap = summary.get('sessions_with_pcap', 0)
+    sessions_with_serial = summary.get('sessions_with_serial', 0)
+    sessions_with_correlation = summary.get('sessions_with_correlation', 0)
 
-    # KPIs
-    dentro_50  = int((delta <= 50).sum()) if not delta.empty else 0
-    pct_dentro = round(dentro_50 / len(delta) * 100) if len(delta) > 0 else 0
+    # Calcular total_sessions desde visits_df para consistencia (si está disponible)
+    if not visits_df.empty and "total_sessions" in visits_df.columns:
+        total_sessions_from_df = int(pd.to_numeric(visits_df["total_sessions"], errors="coerce").sum())
+        # Usar el valor del visits_df si es diferente del summary para consistencia
+        if total_sessions_from_df != total_sessions:
+            total_sessions = total_sessions_from_df
 
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Eventos correlacionados", len(df_s))
-    m2.metric("Desfase medio (ms)",  f"{delta.mean():.2f}" if not delta.empty else "N/D")
-    m3.metric("Desfase máximo (ms)", f"{delta.max():.2f}"  if not delta.empty else "N/D")
-    m4.metric("Dentro de ±50 ms",   f"{dentro_50} / {len(delta)}" if not delta.empty else "N/D")
-    m5.metric("Estabilidad temporal", f"{pct_dentro}%", "dentro de ventana")
+    # Calcular métricas técnicas de visits_df y db_df
+    eta_avg = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0
+    jitter_max = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
+    offset_max = num(pd.to_numeric(db_df.get("desfase_max_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
+    multicast_avg = num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0
+    field_sessions = int(summary.get("objective_1_characterization", {}).get("sessions_with_field_validation", 0) or 0)
 
-    # Gauge de estabilidad
-    fig_gs = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=pct_dentro,
-        title={"text": "% eventos dentro de ±50 ms", "font":{"color":"#fff","size":12}},
-        number={"suffix":"%","font":{"color":"#fff","size":28}},
-        gauge={
-            "axis":{"range":[0,100],"tickcolor":"#8dae9d","tickfont":{"color":"#8dae9d"}},
-            "bar":{"color": GREEN if pct_dentro >= 80 else YELLOW if pct_dentro >= 50 else RED},
-            "bgcolor":"#1a2b1a","bordercolor":"#1a2b1a",
-            "steps":[{"range":[0,50],"color":"#2d1010"},{"range":[50,80],"color":"#2d2d10"},{"range":[80,100],"color":"#102d10"}],
-            "threshold":{"line":{"color":YELLOW,"width":3},"thickness":0.85,"value":80},
-        },
-    ))
-    fig_gs.update_layout(**DARK, height=200, margin=dict(l=20,r=20,t=40,b=10))
-    st.plotly_chart(fig_gs, use_container_width=True)
+    # Cargar alertas reales del lote para análisis detallado
+    all_alerts_frames = []
+    if not visits_df.empty and "visit_name" in visits_df.columns:
+        for vname in visits_df["visit_name"].dropna().unique():
+            df_v = load_visit_alerts(vname)
+            if not df_v.empty:
+                df_v = df_v.copy()
+                df_v["visit_name"] = vname
+                all_alerts_frames.append(df_v)
 
-    c1, c2 = st.columns(2)
-    upd = dict(**DARK, height=250, margin=dict(l=0,r=0,t=30,b=0))
+    all_alerts_df = pd.concat(all_alerts_frames, ignore_index=True) if all_alerts_frames else pd.DataFrame()
 
+    # KPIs principales - Línea 1 (Negocio)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown("**Dispersión de desfase temporal**")
-        fig2 = px.scatter(df_s, x=x_col, y="delta_ms", color_discrete_sequence=[GREEN])
-        fig2.add_hline(y=0, line_dash="dash", line_color="#fff", opacity=0.3)
-        fig2.add_hrect(y0=-50, y1=50, fillcolor=GREEN, opacity=0.05,
-                       annotation_text="Ventana ±50 ms", annotation_font_color=GREEN)
-        st.plotly_chart(fig2.update_layout(**upd), use_container_width=True)
+        severity_class = "alert" if critical_alerts > 0 else ""
+        render_kpi("Problemas Urgentes", str(critical_alerts), "Requieren atención inmediata", severity_class)
+    with c2:
+        severity_class = "warn" if high_alerts > 50 else ""
+        render_kpi("Problemas Importantes", str(high_alerts), "Deben revisarse pronto", severity_class)
+    with c3:
+        efficiency_class = "alert" if eta_avg < 5 else "warn" if eta_avg < 10 else ""
+        render_kpi("Eficiencia", f"{eta_avg:.1f}%", "correlación promedio", efficiency_class)
+    with c4:
+        render_kpi("Mediciones Totales", str(total_sessions), "Momentos analizados", "info")
+    
+    # KPIs técnicos - Línea 2 (Técnico)
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        render_kpi("Visitas", str(int(total_visits or 0)), "procesadas", "info")
+    with c2:
+        jitter_class = "warn" if jitter_max > TIMING_ATTENTION_THRESHOLD_MS else ""
+        render_kpi("Jitter máx.", f"{jitter_max:.1f} ms", "SQL consolidado", jitter_class)
+    with c3:
+        offset_class = "warn" if offset_max > TIMING_ATTENTION_THRESHOLD_MS else ""
+        render_kpi("Desfase máx.", f"{offset_max:.1f} ms", "serial-red", offset_class)
+    with c4:
+        multicast_class = "warn" if multicast_avg > MULTICAST_ATTENTION_THRESHOLD else ""
+        render_kpi("Multicast", f"{multicast_avg:.1f}%", "promedio del tráfico", multicast_class)
+    with c5:
+        render_kpi("Val. campo", str(field_sessions), "sesiones con contraste", "info")
+    
+    # Panel de problemas detallados con alertas REALES agregadas del lote
+    st.markdown('<div class="sec">Análisis Detallado de Problemas</div>', unsafe_allow_html=True)
+    
+    if all_alerts_df.empty:
+        st.info("No se encontraron archivos de alertas detalladas (alerts.json) en las sesiones de este lote.")
+        critical_problems = []
+    else:
+        focus_df = all_alerts_df[all_alerts_df["severity"].isin(["Critica", "Alta"])].copy()
+        
+        # Resumen ejecutivo (sin detalles, esos están en "Por visita")
+        # Usar los mismos valores calculados para los KPIs para consistencia
+        st.markdown(
+            f"<div style='color:#AFCDBB; margin-bottom:10px;'>"
+            f"<strong style='color:{RED};'>{critical_alerts}</strong> críticas · "
+            f"<strong style='color:{ORANGE};'>{high_alerts}</strong> altas · "
+            f"detectadas en {focus_df['visit_name'].nunique()} visita(s) con alertas y "
+            f"{focus_df['sample_name'].nunique()} sesión(es) con alertas"
+            f"</div>"
+            f"<div style='color:#8FC6A1; font-size:0.85rem; margin-bottom:14px;'>"
+            f"Para ver la evidencia específica de cada alerta, ir a la pestaña <strong>Por visita</strong>."
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        
+        # Top tipos de alerta con desglose por visita (colapsado por defecto)
+        all_types = (
+            focus_df.groupby(["severity", "alert_name"])
+            .size()
+            .reset_index(name="n_cases")
+            .sort_values(["severity", "n_cases"], ascending=[True, False])
+        )
+        all_types = pd.concat([
+            all_types[all_types["severity"] == "Critica"],
+            all_types[all_types["severity"] == "Alta"],
+        ])
+        
+        # Construir tabla con visitas afectadas por alerta
+        types_with_visits = []
+        for _, t in all_types.iterrows():
+            n_visits = focus_df[
+                (focus_df["severity"] == t["severity"]) & (focus_df["alert_name"] == t["alert_name"])
+            ]["visit_name"].nunique()
+            types_with_visits.append({
+                "Severidad": "🔴 Crítica" if t["severity"] == "Critica" else "🟠 Alta",
+                "Tipo de alerta": t["alert_name"],
+                "Casos": int(t["n_cases"]),
+                "Visitas afectadas": int(n_visits),
+            })
+        types_table = pd.DataFrame(types_with_visits)
+        
+        with st.expander(f"Ver listado de tipos de alerta ({len(all_types)} tipos)", expanded=False):
+            st.caption("Tabla resumen ordenada por severidad y casos. Selecciona una alerta abajo para ver el desglose por visita.")
+            
+            # Tabla limpia, ordenada
+            st.dataframe(
+                types_table,
+                use_container_width=True,
+                hide_index=True,
+                height=min(420, 45 + 35 * len(types_table)),
+                column_config={
+                    "Severidad": st.column_config.TextColumn(width="small"),
+                    "Tipo de alerta": st.column_config.TextColumn(width="large"),
+                    "Casos": st.column_config.NumberColumn(format="%d", width="small"),
+                    "Visitas afectadas": st.column_config.NumberColumn(format="%d", width="small"),
+                },
+            )
+            
+            # Selector + desglose por visita debajo
+            st.markdown("##### Desglose por visita")
+            alert_options = types_table["Tipo de alerta"].tolist()
+            selected_alert = st.selectbox(
+                "Selecciona una alerta para ver en qué visitas aparece:",
+                alert_options,
+                key="exec_alert_selector",
+            )
+            if selected_alert:
+                sel_row = types_table[types_table["Tipo de alerta"] == selected_alert].iloc[0]
+                sev_norm = "Critica" if "Crítica" in sel_row["Severidad"] else "Alta"
+                by_visit = (
+                    focus_df[(focus_df["severity"] == sev_norm) & (focus_df["alert_name"] == selected_alert)]
+                    .groupby("visit_name")
+                    .size()
+                    .reset_index(name="Casos")
+                    .sort_values("Casos", ascending=False)
+                )
+                by_visit["Visita"] = by_visit["visit_name"].str.replace("Visita_", "", regex=False)
+                st.dataframe(
+                    by_visit[["Visita", "Casos"]],
+                    use_container_width=True,
+                    hide_index=True,
+                    height=min(300, 45 + 35 * len(by_visit)),
+                )
+                st.caption("Para ver la evidencia específica de cada caso, ir a la pestaña **Por visita** y seleccionar la visita correspondiente.")
+        
+        # Construir critical_problems desde datos reales para gráficas
+        critical_problems = []
+        for severity_label, sev_norm in [("Critica", "crítica"), ("Alta", "alta")]:
+            sev_df = focus_df[focus_df["severity"] == severity_label]
+            for alert_name, group in sev_df.groupby("alert_name"):
+                critical_problems.append({
+                    "tipo": alert_name,
+                    "cantidad": len(group),
+                    "severidad": sev_norm,
+                })
+    
+    # Gráficas de análisis
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        # Gráfica de barras horizontal por tipo de problema
+        problem_types = [p["tipo"] for p in critical_problems]
+        problem_counts = [p["cantidad"] for p in critical_problems]
+        problem_colors = [RED if p["severidad"] == "crítica" else ORANGE for p in critical_problems]
+        
+        fig = go.Figure(data=[
+            go.Bar(y=problem_types, x=problem_counts, orientation='h', 
+                  marker_color=problem_colors, text=problem_counts, textposition='auto')
+        ])
+        fig.update_layout(
+            title='Problemas por Tipo',
+            xaxis_title='Cantidad de Casos',
+            yaxis_title='',
+            height=350,
+            yaxis={'categoryorder': 'total ascending'}
+        )
+        st.plotly_chart(dark(fig), use_container_width=True)
+    
+    with c2:
+        # Cobertura de monitoreo
+        coverage_df = pd.DataFrame({
+            'Componente': ['Monitoreo de Red', 'Datos de Ordeño', 'Sincronización', 'Otros'],
+            'Sesiones': [sessions_with_pcap, sessions_with_serial, sessions_with_correlation, 
+                        total_sessions - sessions_with_pcap - sessions_with_serial - sessions_with_correlation],
+            'Color': [GREEN, BLUE, YELLOW, ORANGE]
+        })
+        
+        fig = px.bar(
+            coverage_df, 
+            x='Componente', 
+            y='Sesiones', 
+            title='Cobertura de Monitoreo',
+            color='Componente',
+            color_discrete_map={'Monitoreo de Red': GREEN, 'Datos de Ordeño': BLUE, 
+                             'Sincronización': YELLOW, 'Otros': ORANGE}
+        )
+        fig.update_layout(xaxis_title='', yaxis_title='Sesiones')
+        st.plotly_chart(dark(fig, 300), use_container_width=True)
+    
+    # Impacto en la finca
+    st.markdown('<div class="sec">Impacto en la Operación de la Finca</div>', unsafe_allow_html=True)
+    
+    # Análisis de impacto
+    impact_critical = critical_alerts * 3  # Ponderación: crítico = 3x impacto
+    impact_high = high_alerts * 2         # Ponderación: importante = 2x impacto
+    total_impact = impact_critical + impact_high
+    
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        # Impacto por severidad
+        impact_df = pd.DataFrame({
+            'Severidad': ['Urgentes', 'Importantes'],
+            'Impacto': [impact_critical, impact_high],
+            'Problemas': [critical_alerts, high_alerts]
+        })
+        
+        fig = px.bar(
+            impact_df, 
+            x='Severidad', 
+            y='Impacto', 
+            title='Impacto Operativo (Ponderado)',
+            color='Severidad',
+            color_discrete_map={'Urgentes': RED, 'Importantes': ORANGE}
+        )
+        fig.update_layout(xaxis_title='', yaxis_title='Puntos de Impacto')
+        st.plotly_chart(dark(fig, 280), use_container_width=True)
+    
+    with c2:
+        # Estado del sistema
+        system_status = "Crítico" if critical_alerts > 5 else "Preocupante" if critical_alerts > 0 or high_alerts > 50 else "Estable"
+        status_color = RED if system_status == "Crítico" else ORANGE if system_status == "Preocupante" else GREEN
+        
+        st.markdown(f"""
+        <div class="card">
+            <h4 style="color: {status_color}; margin: 0 0 10px 0;">Estado del Sistema: {system_status}</h4>
+            <div style="font-size: 0.9rem; color: #D6E7DD;">
+                <p><strong>⚠️ Riesgos identificados:</strong></p>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li>Conflicto de identidad en red: {critical_alerts} casos</li>
+                    <li>Conexiones externas no autorizadas: {critical_alerts} casos</li>
+                    <li>Ruido de red excesivo: {high_alerts} casos</li>
+                    <li>Equipos con identidad ambigua: {high_alerts} casos</li>
+                </ul>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with c3:
+        # Recomendaciones automáticas
+        recommendations = []
+        if critical_alerts > 0:
+            recommendations.append(f"1. Atender {critical_alerts} problemas urgentes")
+        if high_alerts > 20:
+            recommendations.append(f"2. Revisar {high_alerts} problemas importantes")
+        if eta_avg < 10:
+            recommendations.append(f"3. Mejorar eficiencia (actual: {eta_avg:.1f}%)")
+        
+        st.markdown(f"""
+        <div class="card">
+            <h4 style="color: {GREEN}; margin: 0 0 10px 0;">Recomendaciones Prioritarias</h4>
+            <div style="font-size: 0.85rem; color: #D6E7DD;">
+                <ol style="margin: 5px 0; padding-left: 20px;">
+                    {''.join(f'<li>{rec}</li>' for rec in recommendations[:3])}
+                </ol>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def render_threat_panel(visits_df: pd.DataFrame):
+    st.markdown('<div class="sec">Panel de amenazas y riesgo operativo</div>', unsafe_allow_html=True)
+    if visits_df.empty:
+        st.info("No hay visitas disponibles para evaluar riesgo.")
+        return
+
+    df = visits_df.copy()
+    if "visit_name" in df.columns:
+        df["Visita"] = df["visit_name"].astype(str).map(lambda value: format_visit_label(value, "V"))
+    else:
+        df["Visita"] = "N/D"
+    df["η (%)"] = pd.to_numeric(df.get("avg_eta_extraccion", 0), errors="coerce").fillna(0)
+    df["Multicast %"] = pd.to_numeric(df.get("avg_multicast_pct", 0), errors="coerce").fillna(0)
+    df["Desfase (ms)"] = pd.to_numeric(df.get("avg_desfase_medio_ms", 0), errors="coerce").fillna(0)
+
+    # Usar valores de alertas ya actualizados en visits_df desde archivos alerts.json reales
+    df["Alertas altas"] = pd.to_numeric(df.get("total_alertas_altas", 0), errors="coerce").fillna(0)
+    df["Alertas críticas"] = pd.to_numeric(df.get("total_alertas_criticas", 0), errors="coerce").fillna(0)
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name="Críticas", x=df["Visita"], y=df["Alertas críticas"], marker_color=RED))
+        fig.add_trace(go.Bar(name="Altas", x=df["Visita"], y=df["Alertas altas"], marker_color=ORANGE))
+        fig.update_layout(barmode="stack", title="Alertas por visita", legend=dict(orientation="h"))
+        st.plotly_chart(dark(fig, 260), use_container_width=True)
 
     with c2:
-        st.markdown("**Histograma de estabilidad**")
-        fig3 = px.histogram(df_s, x="delta_ms", nbins=30, color_discrete_sequence=[GREEN])
-        fig3.add_vline(x=0, line_dash="dash", line_color="#fff", opacity=0.4)
-        st.plotly_chart(fig3.update_layout(**upd), use_container_width=True)
+        risk_counts = df.apply(risk_level, axis=1).value_counts()
+        fig = px.pie(
+            names=["Alto", "Medio", "Bajo"],
+            values=[int(risk_counts.get("Alto", 0)), int(risk_counts.get("Medio", 0)), int(risk_counts.get("Bajo", 0))],
+            hole=0.58,
+            color=["Alto", "Medio", "Bajo"],
+            color_discrete_map={"Alto": RED, "Medio": YELLOW, "Bajo": GREEN},
+            title="Distribución de riesgo",
+        )
+        st.plotly_chart(dark(fig, 260), use_container_width=True)
 
-    st.markdown("**Tendencia temporal de desfase**")
-    fig4 = px.line(df_s, x=x_col, y="delta_ms", color_discrete_sequence=[GREEN])
-    fig4.add_hline(y=71.3, line_dash="dot", line_color=RED,
-                   annotation_text="Jitter máx. 71.3 ms", annotation_font_color=RED)
-    fig4.add_hline(y=-71.3, line_dash="dot", line_color=RED)
-    st.plotly_chart(fig4.update_layout(**upd), use_container_width=True)
+    with c3:
+        serial_counts = pd.to_numeric(df["sessions_with_serial"], errors="coerce").fillna(0) if "sessions_with_serial" in df.columns else pd.Series([0] * len(df), index=df.index, dtype=float)
+        exposure = pd.DataFrame(
+            {
+                "Vector": ["Multicast alto", "Desfase alto", "Sin serial", "Alerta crítica"],
+                "Visitas": [
+                    int((df["Multicast %"] > MULTICAST_ATTENTION_THRESHOLD).sum()),
+                    int((df["Desfase (ms)"] > TIMING_ATTENTION_THRESHOLD_MS).sum()),
+                    int((serial_counts == 0).sum()),
+                    int((df["Alertas críticas"] > 0).sum()),
+                ],
+            }
+        )
+        fig = px.bar(exposure, x="Visitas", y="Vector", orientation="h", color="Vector", color_discrete_sequence=[ORANGE, YELLOW, BLUE, RED], title="Exposición por vector")
+        st.plotly_chart(dark(fig, 260), use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TAB TRAZABILIDAD SQL
-# ─────────────────────────────────────────────────────────────────────────────
-def tab_trazabilidad():
-    st.subheader("Trazabilidad (SQL)")
-    df = get_db()
+    scatter = px.scatter(
+        df,
+        x="Multicast %",
+        y="η (%)",
+        text="Visita",
+        color="Alertas críticas",
+        color_continuous_scale=[GREEN, ORANGE, RED],
+        title="Impacto de multicast sobre η",
+    )
+    scatter.update_traces(textposition="top center", marker_size=11)
+    scatter.add_hline(y=ETA_STRONG_THRESHOLD, line_dash="dash", line_color=YELLOW)
+    st.plotly_chart(dark(scatter, 300), use_container_width=True)
 
-    if df.empty:
-        st.info("Todavía no hay registros guardados.")
+
+def render_general(summary: dict, visits_df: pd.DataFrame, corr_df: pd.DataFrame, db_df: pd.DataFrame, critical_alerts: int, high_alerts: int):
+    render_executive_panel(summary, visits_df, db_df, critical_alerts, high_alerts)
+    render_assessment(visits_df)
+
+    st.markdown('<div class="sec">Tendencia y estructura</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        if not visits_df.empty:
+            df = visits_df.copy()
+            df["eta"] = pd.to_numeric(df.get("avg_eta_extraccion", 0), errors="coerce").fillna(0)
+            if "visit_name" in df.columns:
+                df["visita"] = df["visit_name"].astype(str).map(lambda x: format_visit_label(x, "V"))
+            else:
+                df["visita"] = "N/D"
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=df["visita"],
+                    y=df["eta"],
+                    mode="lines+markers",
+                    marker=dict(size=9, color=[eta_color(v) for v in df["eta"]]),
+                    line=dict(color=GREEN, width=2.5),
+                    name="η por visita",
+                )
+            )
+            fig.add_hline(y=ETA_STRONG_THRESHOLD, line_dash="dash", line_color=YELLOW, annotation_text=f"Cobertura fuerte {ETA_STRONG_THRESHOLD:.0f}%")
+            fig.add_hline(y=ETA_PARTIAL_THRESHOLD, line_dash="dot", line_color=ORANGE, annotation_text=f"Cobertura parcial {ETA_PARTIAL_THRESHOLD:.0f}%")
+            fig.update_layout(xaxis=dict(tickangle=-30), yaxis=dict(title="η (%)"), title="Cobertura η por visita")
+            st.plotly_chart(dark(fig, 300), use_container_width=True)
+    with c2:
+        op_counts = summary.get("operation_mode_counts", {})
+        if op_counts:
+            df_modes = pd.DataFrame(
+                {"Modo": list(op_counts.keys()), "Sesiones": list(op_counts.values())}
+            )
+            fig = px.bar(
+                df_modes,
+                x="Modo",
+                y="Sesiones",
+                color="Modo",
+                color_discrete_sequence=[GREEN, BLUE, YELLOW, ORANGE],
+                title="Composición operativa del lote",
+            )
+            st.plotly_chart(dark(fig, 300), use_container_width=True)
+
+    render_sampling(summary, visits_df)
+
+    st.markdown('<div class="sec">Lectura rápida de riesgo</div>', unsafe_allow_html=True)
+    if not visits_df.empty:
+        table = visits_df.copy()
+        table["η (%)"] = pd.to_numeric(table.get("avg_eta_extraccion", 0), errors="coerce").fillna(0).round(2)
+        table["Multicast %"] = pd.to_numeric(table.get("avg_multicast_pct", 0), errors="coerce").fillna(0).round(2)
+        table["Desfase (ms)"] = pd.to_numeric(table.get("avg_desfase_medio_ms", 0), errors="coerce").fillna(0).round(2)
+        table["Riesgo"] = table.apply(risk_level, axis=1)
+        if "visit_name" in table.columns:
+            table["Visita"] = table["visit_name"].astype(str).map(lambda x: format_visit_label(x, "Visita "))
+        else:
+            table["Visita"] = "N/D"
+        display = table[
+            [
+                "Visita",
+                "η (%)",
+                "Multicast %",
+                "Desfase (ms)",
+                "total_alertas_altas",
+                "total_alertas_criticas",
+                "Riesgo",
+            ]
+        ].rename(
+            columns={
+                "total_alertas_altas": "Alertas altas",
+                "total_alertas_criticas": "Alertas críticas",
+            }
+        )
+        st.dataframe(display, use_container_width=True, hide_index=True, height=320)
+
+    render_threat_panel(visits_df)
+
+    if not corr_df.empty:
+        st.markdown('<div class="sec">Correlación serial-red</div>', unsafe_allow_html=True)
+        corr = corr_df.copy()
+        corr["abs_delta_ms"] = pd.to_numeric(corr.get("abs_delta_ms", 0), errors="coerce").fillna(0)
+        matched = parse_bool_series(corr["matched"] if "matched" in corr.columns else False, len(corr))
+        matched_rate = 100.0 * matched.mean()
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Eventos correlados", len(corr))
+        m2.metric("Tasa de match", f"{matched_rate:.1f}%")
+        m3.metric("Delta abs. medio", f"{corr['abs_delta_ms'].mean():.1f} ms")
+
+
+def render_visit_detail(visits_df: pd.DataFrame):
+    st.markdown('<div class="sec">Detalle por visita</div>', unsafe_allow_html=True)
+    if visits_df.empty:
+        st.info("No hay visitas disponibles en este lote.")
         return
 
-    c_filter, _ = st.columns([1, 3])
-    with c_filter:
-        filter_mode = st.selectbox(
-            "Ventana de registros",
-            ["Todo", "Últimas 24h", "Últimos 7 días", "Últimos 30 días"],
-        )
+    if "visit_name" not in visits_df.columns:
+        st.info("No hay información de visitas disponible en este lote.")
+        return
 
-    if "fecha" in df.columns:
-        fecha_dt = pd.to_datetime(df["fecha"], errors="coerce")
-        now = datetime.now()
-        min_ts: datetime | None = None
-        if filter_mode == "Últimas 24h":
-            min_ts = now - timedelta(hours=24)
-        elif filter_mode == "Últimos 7 días":
-            min_ts = now - timedelta(days=7)
-        elif filter_mode == "Últimos 30 días":
-            min_ts = now - timedelta(days=30)
-        if min_ts is not None:
-            df = df.loc[fecha_dt.notna() & (fecha_dt >= min_ts)].copy()
+    options = visits_df["visit_name"].tolist()
+    selected = st.selectbox("Visita", options, format_func=lambda x: format_visit_label(x, "Visita "))
+    row = visits_df[visits_df["visit_name"] == selected].iloc[0]
+
+    eta = num(row.get("avg_eta_extraccion", 0))
+    multicast = num(row.get("avg_multicast_pct", 0))
+    offset = num(row.get("avg_desfase_medio_ms", 0))
+    alerts_high = int(row.get("total_alertas_altas", 0) or 0)
+    alerts_crit = int(row.get("total_alertas_criticas", 0) or 0)
+    total_sessions = int(row.get("total_sessions", 0) or 0)
+    sessions_pcap = int(row.get("sessions_with_pcap", 0) or 0)
+    sessions_serial = int(row.get("sessions_with_serial", 0) or 0)
+    sessions_collar = int(row.get("sessions_with_antenna_udp", 0) or 0)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("η", f"{eta:.1f}%", classify_eta(eta))
+    c2.metric("Multicast", f"{multicast:.1f}%", "atención" if multicast > MULTICAST_ATTENTION_THRESHOLD else "normal")
+    c3.metric("Desfase medio", f"{offset:.1f} ms", "atención" if offset > TIMING_ATTENTION_THRESHOLD_MS else "normal")
+    c4.metric("Alertas", f"{alerts_high} / {alerts_crit}", "altas / críticas")
+
+    # Sección de problemas encontrados en esta visita - alertas reales con evidencia
+    st.markdown('<div class="sec">Problemas Encontrados en esta Visita</div>', unsafe_allow_html=True)
+    
+    alerts_df = load_visit_alerts(selected)
+    
+    if alerts_df.empty:
+        st.success("✅ No se detectaron problemas en esta visita")
+    else:
+        # Filtrar solo Críticas y Altas (los "problemas" reales)
+        focus_df = alerts_df[alerts_df["severity"].isin(["Critica", "Alta"])].copy()
+        
+        if focus_df.empty:
+            st.success("✅ No se detectaron problemas críticos ni altos en esta visita")
         else:
-            df = df.loc[fecha_dt.notna()].copy()
+            # Resumen por severidad
+            sev_counts = focus_df["severity"].value_counts()
+            crit_n = int(sev_counts.get("Critica", 0))
+            high_n = int(sev_counts.get("Alta", 0))
+            st.markdown(
+                f"<div style='color:#AFCDBB; margin-bottom:10px;'>"
+                f"<strong style='color:{RED};'>{crit_n}</strong> críticas · "
+                f"<strong style='color:{ORANGE};'>{high_n}</strong> altas · "
+                f"agrupadas por tipo en {focus_df['sample_name'].nunique()} sesión(es)"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            
+            # Tabla resumen + selector de detalle (mismo formato que Panel General)
+            visit_types_rows = []
+            for (severity_label, alert_name), group in focus_df.groupby(["severity", "alert_name"]):
+                visit_types_rows.append({
+                    "Severidad": "🔴 Crítica" if severity_label == "Critica" else "🟠 Alta",
+                    "Tipo de alerta": alert_name,
+                    "Casos": len(group),
+                    "Sesiones afectadas": group["sample_name"].nunique(),
+                    "Capa": ", ".join(sorted(group["layer"].unique())),
+                    "_sev_rank": 0 if severity_label == "Critica" else 1,
+                })
+            visit_types_df = (
+                pd.DataFrame(visit_types_rows)
+                .sort_values(["_sev_rank", "Casos"], ascending=[True, False])
+                .drop(columns="_sev_rank")
+                .reset_index(drop=True)
+            )
+            
+            st.caption("Tabla resumen ordenada por severidad y casos. Selecciona una alerta abajo para ver la evidencia específica.")
+            st.dataframe(
+                visit_types_df,
+                use_container_width=True,
+                hide_index=True,
+                height=min(420, 45 + 35 * len(visit_types_df)),
+                column_config={
+                    "Severidad": st.column_config.TextColumn(width="small"),
+                    "Tipo de alerta": st.column_config.TextColumn(width="large"),
+                    "Casos": st.column_config.NumberColumn(format="%d", width="small"),
+                    "Sesiones afectadas": st.column_config.NumberColumn(format="%d", width="small"),
+                    "Capa": st.column_config.TextColumn(width="medium"),
+                },
+            )
+            
+            # Selector + evidencia debajo
+            st.markdown("##### Evidencia detallada")
+            alert_options = visit_types_df["Tipo de alerta"].tolist()
+            selected_alert = st.selectbox(
+                "Selecciona una alerta para ver la evidencia específica:",
+                alert_options,
+                key=f"visit_alert_selector_{selected}",
+            )
+            if selected_alert:
+                sel_row = visit_types_df[visit_types_df["Tipo de alerta"] == selected_alert].iloc[0]
+                sev_norm = "Critica" if "Crítica" in sel_row["Severidad"] else "Alta"
+                group = focus_df[(focus_df["severity"] == sev_norm) & (focus_df["alert_name"] == selected_alert)]
+                first = group.iloc[0]
+                
+                # Metadatos colapsados (solo visibles bajo demanda)
+                with st.expander("ℹ️ Ver impacto y recomendación", expanded=False):
+                    st.markdown(
+                        f"**Severidad:** {sel_row['Severidad']}  ·  **Capa:** {sel_row['Capa']}  ·  "
+                        f"**Casos:** {sel_row['Casos']}  ·  **Sesiones:** {sel_row['Sesiones afectadas']}"
+                    )
+                    st.markdown(f"**Impacto:** {first['impact']}")
+                    st.markdown(f"**Recomendación:** {first['recommendation']}")
+                
+                evidence_cols = ["sample_name", "evidence", "protocol", "timestamp"]
+                display_df = group[[c for c in evidence_cols if c in group.columns]].reset_index(drop=True)
+                display_df.columns = [c.replace("_", " ").title() for c in display_df.columns]
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=min(360, 45 + 35 * len(display_df)),
+                )
 
-    numeric_cols = [
-        "eta_extraccion",
-        "desfase_medio_ms",
-        "jitter_ms",
-        "packet_loss",
-        "lat_media",
-        "desfase_max_ms",
-        "multicast_pct",
-    ]
-    for col in numeric_cols:
+    d1, d2 = st.columns(2)
+    with d1:
+        fig = go.Figure(
+            go.Indicator(
+                mode="gauge+number",
+                value=eta,
+                number={"suffix": "%"},
+                title={"text": format_visit_label(selected, "Visita ")},
+                gauge={
+                    "axis": {"range": [0, 100]},
+                    "bar": {"color": eta_color(eta)},
+                    "steps": [
+                        {"range": [0, ETA_PARTIAL_THRESHOLD], "color": "#341414"},
+                        {"range": [ETA_PARTIAL_THRESHOLD, ETA_STRONG_THRESHOLD], "color": "#433813"},
+                        {"range": [ETA_STRONG_THRESHOLD, 100], "color": "#17331E"},
+                    ],
+                    "threshold": {"line": {"color": YELLOW, "width": 3}, "value": ETA_STRONG_THRESHOLD},
+                },
+            )
+        )
+        st.plotly_chart(dark(fig, 280), use_container_width=True)
+    with d2:
+        comp = pd.DataFrame(
+            {
+                "Tipo": ["PCAP", "Serial", "Collar/Antena", "Baseline"],
+                "Sesiones": [
+                    sessions_pcap,
+                    sessions_serial,
+                    sessions_collar,
+                    max(0, total_sessions - max(sessions_pcap, sessions_serial, sessions_collar)),
+                ],
+            }
+        )
+        fig = px.bar(comp, x="Sesiones", y="Tipo", orientation="h", color="Tipo", color_discrete_sequence=[BLUE, GREEN, YELLOW, ORANGE])
+        st.plotly_chart(dark(fig, 280), use_container_width=True)
+
+    detail = pd.DataFrame(
+        {
+            "Parámetro": [
+                "Sesiones totales",
+                "Sesiones con PCAP",
+                "Sesiones con serial",
+                "Sesiones de collar",
+                "Riesgo operativo",
+            ],
+            "Valor": [
+                total_sessions,
+                sessions_pcap,
+                sessions_serial,
+                sessions_collar,
+                risk_level(row),
+            ],
+        }
+    )
+    st.dataframe(detail, use_container_width=True, hide_index=True)
+
+
+def render_sync(corr_df: pd.DataFrame):
+    st.markdown('<div class="sec">Sincronía serial-red</div>', unsafe_allow_html=True)
+    if corr_df.empty:
+        st.info("Este lote no trae correlación global serial-red.")
+        return
+
+    df = corr_df.copy()
+    df["abs_delta_ms"] = pd.to_numeric(df.get("abs_delta_ms", 0), errors="coerce").fillna(0)
+    df["matched"] = parse_bool_series(df["matched"] if "matched" in df.columns else False, len(df))
+    if "visit_name" in df.columns:
+        df["visit_name"] = df["visit_name"].astype(str)
+        df["visit_date"] = df["visit_name"].map(visit_date_from_name)
+    if "sample_id" in df.columns:
+        df["sample_id"] = df["sample_id"].astype(str)
+    if "serial_event" in df.columns:
+        df["serial_event"] = df["serial_event"].astype(str)
+
+    has_visit_scope = "visit_name" in df.columns and df["visit_name"].str.strip().ne("").any()
+    has_session_scope = "sample_id" in df.columns and df["sample_id"].str.strip().ne("").any()
+    has_date_scope = "visit_date" in df.columns and df["visit_date"].str.strip().ne("").any()
+    has_event_scope = "serial_event" in df.columns and df["serial_event"].str.strip().ne("").any()
+
+    if not has_visit_scope and not has_session_scope:
+        st.caption("Este archivo de correlación es de formato antiguo: la sincronía sigue filtrable por evento/estado, pero no por visita o sesión hasta regenerar el lote.")
+
+    filter_cols = st.columns(4)
+    filtered = df.copy()
+
+    with filter_cols[0]:
+        if has_visit_scope:
+            visit_options = ["Todas"] + sorted({value for value in df["visit_name"].tolist() if str(value).strip()})
+            selected_visit = st.selectbox("Visita", visit_options, format_func=lambda value: value if value == "Todas" else format_visit_label(value, "Visita "))
+            if selected_visit != "Todas":
+                filtered = filtered[filtered["visit_name"] == selected_visit]
+        else:
+            st.selectbox("Visita", ["No disponible"], disabled=True)
+
+    with filter_cols[1]:
+        if has_date_scope:
+            date_options = ["Todas"] + sorted({value for value in filtered["visit_date"].tolist() if str(value).strip()})
+            selected_date = st.selectbox("Fecha", date_options)
+            if selected_date != "Todas":
+                filtered = filtered[filtered["visit_date"] == selected_date]
+        else:
+            st.selectbox("Fecha", ["No disponible"], disabled=True)
+
+    with filter_cols[2]:
+        if has_session_scope:
+            session_options = ["Todas"] + sorted({value for value in filtered["sample_id"].tolist() if str(value).strip()})
+            selected_session = st.selectbox("Sesión", session_options)
+            if selected_session != "Todas":
+                filtered = filtered[filtered["sample_id"] == selected_session]
+        else:
+            st.selectbox("Sesión", ["No disponible"], disabled=True)
+
+    with filter_cols[3]:
+        if has_event_scope:
+            event_options = ["Todos"] + sorted({value for value in filtered["serial_event"].tolist() if str(value).strip()})
+            selected_event = st.selectbox("Evento serial", event_options)
+            if selected_event != "Todos":
+                filtered = filtered[filtered["serial_event"] == selected_event]
+        else:
+            st.selectbox("Evento serial", ["No disponible"], disabled=True)
+
+    match_scope = st.radio("Estado de correlación", ["Todos", "Solo match", "Solo sin match"], horizontal=True)
+    if match_scope == "Solo match":
+        filtered = filtered[filtered["matched"]]
+    elif match_scope == "Solo sin match":
+        filtered = filtered[~filtered["matched"]]
+
+    if filtered.empty:
+        st.warning("No hay eventos de sincronía para el filtro seleccionado.")
+        return
+
+    df = filtered
+    matched_rate = 100.0 * df["matched"].mean()
+    raw_delta_col = "delta_ms" if "delta_ms" in df.columns else "abs_delta_ms"
+    x_col = None
+    for candidate in ["timestamp_serial", "timestamp_red", "timestamp", "event_timestamp"]:
+        if candidate in df.columns:
+            x_col = candidate
+            break
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Eventos", len(df))
+    c2.metric("Match", f"{matched_rate:.1f}%")
+    c3.metric("P95 abs. delta", f"{df['abs_delta_ms'].quantile(0.95):.1f} ms")
+
+    scope_parts = []
+    if has_visit_scope and len(df["visit_name"].dropna().unique()) == 1:
+        scope_parts.append(f"visita {format_visit_label(df['visit_name'].dropna().iloc[0], 'Visita ')}")
+    if has_session_scope and len(df["sample_id"].dropna().unique()) == 1:
+        scope_parts.append(f"sesión {df['sample_id'].dropna().iloc[0]}")
+    if has_event_scope and len(df["serial_event"].dropna().unique()) == 1:
+        scope_parts.append(f"evento {df['serial_event'].dropna().iloc[0]}")
+    if scope_parts:
+        st.caption("Vista actual: " + " | ".join(scope_parts))
+
+    p1, p2 = st.columns(2)
+    with p1:
+        fig = px.histogram(df, x="abs_delta_ms", nbins=30, color_discrete_sequence=[GREEN], title="Distribución de |delta|")
+        st.plotly_chart(dark(fig, 280), use_container_width=True)
+    with p2:
+        pie = pd.DataFrame(
+            {
+                "Estado": ["Match", "Sin match"],
+                "Cantidad": [int(df["matched"].sum()), int((~df["matched"]).sum())],
+            }
+        )
+        fig = px.pie(pie, values="Cantidad", names="Estado", color="Estado", color_discrete_map={"Match": GREEN, "Sin match": RED}, title="Estado de correlación")
+        st.plotly_chart(dark(fig, 280), use_container_width=True)
+
+    if x_col is not None:
+        series = df.copy()
+        series[x_col] = pd.to_datetime(series[x_col], errors="coerce")
+        series = series.dropna(subset=[x_col]).sort_values(x_col)
+        if not series.empty:
+            fig = px.line(series, x=x_col, y=raw_delta_col, markers=True, color_discrete_sequence=[GREEN], title="Tendencia temporal del desfase")
+            fig.add_hline(y=TIMING_ATTENTION_THRESHOLD_MS, line_dash="dash", line_color=YELLOW)
+            fig.add_hline(y=-TIMING_ATTENTION_THRESHOLD_MS, line_dash="dash", line_color=YELLOW)
+            st.plotly_chart(dark(fig, 300), use_container_width=True)
+
+    display_cols = [col for col in ["visit_name", "visit_date", "sample_id", "serial_event", "timestamp_serial", raw_delta_col, "abs_delta_ms", "matched"] if col in df.columns]
+    st.dataframe(df[display_cols], use_container_width=True, hide_index=True, height=260)
+
+
+def render_trazabilidad(db_df: pd.DataFrame):
+    st.markdown('<div class="sec">Trazabilidad SQL</div>', unsafe_allow_html=True)
+    if db_df.empty:
+        st.info("No hay base SQL consolidada disponible.")
+        return
+
+    df = db_df.copy()
+    for col in ["eta_extraccion", "desfase_medio_ms", "jitter_ms", "packet_loss", "lat_media"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # KPIs
-    eta_v  = df[df["eta_extraccion"]    != -1]["eta_extraccion"]
-    def_v  = df[df["desfase_medio_ms"]  != -1]["desfase_medio_ms"]
-    jit_v  = df[df["jitter_ms"]         != -1]["jitter_ms"]
-    plr_v  = df[df["packet_loss"]       != -1]["packet_loss"]
-    comp   = df[(df["lat_media"] != -1) & (df["eta_extraccion"] != -1)]
+    eta = df["eta_extraccion"].dropna() if "eta_extraccion" in df.columns else pd.Series(dtype=float)
+    jitter = df["jitter_ms"].dropna() if "jitter_ms" in df.columns else pd.Series(dtype=float)
 
-    k1,k2,k3,k4,k5 = st.columns(5)
-    k1.metric("Registros totales",    len(df))
-    k2.metric("Muestras completas",   len(comp))
-    k3.metric("η promedio",           f"{eta_v.mean():.2f}%" if not eta_v.empty else "N/D")
-    k4.metric("Desfase medio prom.",  f"{def_v.mean():.2f} ms" if not def_v.empty else "N/D")
-    k5.metric("Jitter máx. registrado", f"{jit_v.max():.2f} ms" if not jit_v.empty else "N/D")
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Registros", len(df))
+    k2.metric("η promedio", f"{eta.mean():.2f}%" if not eta.empty else "N/D")
+    k3.metric("Jitter máx.", f"{jitter.max():.2f} ms" if not jitter.empty else "N/D")
+    k4.metric("PLR medio", f"{df['packet_loss'].dropna().mean():.2f}%" if "packet_loss" in df.columns and not df["packet_loss"].dropna().empty else "N/D")
 
-    upd = dict(**DARK, height=250, margin=dict(l=0,r=0,t=30,b=0))
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("**η extracción por muestra**")
-        if not eta_v.empty:
-            valid = df[df["eta_extraccion"] != -1]
-            fig   = px.bar(valid, x="id_muestra", y="eta_extraccion",
-                           color="fecha", color_discrete_sequence=[GREEN, BLUE, YELLOW])
-            fig.add_hline(y=95, line_dash="dash", line_color=YELLOW,
-                          annotation_text="Meta 95%", annotation_font_color=YELLOW)
-            fig.add_hline(y=0.55, line_dash="dot", line_color=RED,
-                          annotation_text="Línea base", annotation_font_color=RED)
-            st.plotly_chart(fig.update_layout(**upd), use_container_width=True)
-
-    with c2:
-        st.markdown("**Latencia media por muestra**")
-        valid = df[df["lat_media"] != -1]
-        if not valid.empty:
-            fig2 = px.line(valid, x="id_muestra", y="lat_media",
-                           color="fecha", markers=True)
-            st.plotly_chart(fig2.update_layout(**upd), use_container_width=True)
-
-    with c3:
-        st.markdown("**Desfase medio vs multicast**")
-        valid = df[(df["desfase_medio_ms"] != -1) & (df["multicast_pct"] != -1)]
-        if not valid.empty:
-            fig3 = px.bar(valid, x="id_muestra", y="desfase_medio_ms",
-                          color="multicast_pct",
-                          color_continuous_scale=["green","yellow","red"])
-            fig3.add_hline(y=71.3, line_dash="dot", line_color=RED)
-            st.plotly_chart(fig3.update_layout(**upd), use_container_width=True)
-
-    # Scatter latencia vs η — clave para prueba t
-    st.markdown("**Correlación latencia vs η — evidencia para prueba t de Student**")
-    if not comp.empty:
-        size_col = None
-        if "desfase_medio_ms" in comp.columns:
-            comp = comp.copy()
-            comp["desfase_medio_ms"] = pd.to_numeric(comp["desfase_medio_ms"], errors="coerce").fillna(0)
-            size_col = "desfase_medio_ms"
-        fig_t = px.scatter(
-            comp,
-            x="lat_media",
-            y="eta_extraccion",
-            size=size_col,
-            color="fecha",
-            trendline="ols" if _HAS_STATSMODELS else None,
-            labels={"lat_media": "Latencia media (ms)", "eta_extraccion": "η (%)"},
-            color_discrete_sequence=[GREEN, BLUE, YELLOW],
-        )
-        fig_t.add_hline(y=95, line_dash="dash", line_color=YELLOW,
-                        annotation_text="Meta η 95%", annotation_font_color=YELLOW)
-        dark(fig_t, 300)
-        st.plotly_chart(fig_t, use_container_width=True)
-
-    # Histograma de jitter — distribución para Shapiro-Wilk
-    if not jit_v.empty:
-        st.markdown("**Distribución de jitter — base para prueba de normalidad Shapiro-Wilk**")
-        valid_j = df[df["jitter_ms"] != -1]
-        fig_j   = px.histogram(valid_j, x="jitter_ms", nbins=20,
-                               color_discrete_sequence=[GREEN],
-                               labels={"jitter_ms": "Jitter (ms)"})
-        fig_j.add_vline(x=jit_v.mean(), line_dash="dash", line_color=YELLOW,
-                        annotation_text=f"Media {jit_v.mean():.1f} ms",
-                        annotation_font_color=YELLOW)
-        dark(fig_j, 240)
-        st.plotly_chart(fig_j, use_container_width=True)
-
-    # Tabla completa
-    st.markdown("**Registro completo**")
-    display = df.rename(columns={
-        "fecha":"Fecha","id_muestra":"Muestra","lat_media":"Latencia (ms)",
-        "jitter_ms":"Jitter (ms)","packet_loss":"PLR (%)","nodos_dinamicos":"Nodos din.",
-        "score_ids":"Score IDS","eventos_fc":"FC","eventos_fe":"FE",
-        "firmas_56d100":"Firmas 56D1","eventos_red":"Eventos red",
-        "eventos_correlacionados":"Correlacionados","desfase_medio_ms":"Desfase medio",
-        "desfase_max_ms":"Desfase máx.","multicast_pct":"Multicast %",
-        "eta_extraccion":"η (%)","observacion_tecnica":"Observación",
-    })
-    st.dataframe(display, use_container_width=True, height=300)
-    csv = display.to_csv(index=False).encode("utf-8")
-    st.download_button("Descargar CSV", data=csv,
-                       file_name=f"trazabilidad_fincadiag.csv", mime="text/csv")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TAB POR VISITA
-# ─────────────────────────────────────────────────────────────────────────────
-def tab_por_visita(label: str, path: Path):
-    visits_df = load_visits(path, label)
-    if visits_df.empty:
-        st.info("No hay visitas para mostrar en este lote.")
-        return
-
-    nombres = visits_df["visit_name"].tolist()
-    sel     = st.selectbox("Seleccionar visita", nombres,
-                           format_func=lambda x: format_visit_label(x, prefix="Visita "))
-    row     = visits_df[visits_df["visit_name"] == sel].iloc[0]
-
-    eta   = num(row.get("avg_eta_extraccion", 0))
-    mc_v  = num(row.get("avg_multicast_pct", 0))
-    def_v = num(row.get("avg_desfase_medio_ms", 0))
-    alts  = int(row.get("total_alertas_altas", 0) or 0)
-    crit  = int(row.get("total_alertas_criticas", 0) or 0)
-    sess  = int(row.get("total_sessions", 0) or 0)
-    pcaps = int(row.get("sessions_with_pcap", 0) or 0)
-    ser   = int(row.get("sessions_with_serial", 0) or 0)
-    collar= int(row.get("sessions_with_antenna_udp", 0) or 0)
-    bc    = CAT_COLOR[classify(eta)]
-
-    # Métricas principales
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric("η extracción",    f"{eta:.1f}%",   "vs meta 95%" )
-    m2.metric("Multicast",       f"{mc_v:.1f}%",  "umbral 15%"  )
-    m3.metric("Desfase medio",   f"{def_v:.1f} ms","umbral 50 ms")
-    m4.metric("Alertas altas",   alts)
-    m5.metric("Alertas críticas",crit)
-    m6.metric("Sesiones totales",sess)
-
-    st.markdown("---")
     c1, c2 = st.columns(2)
-
     with c1:
-        # Gauge de η de esta visita
-        fig_g = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=eta,
-            delta={"reference": 95, "suffix": "%",
-                   "increasing": {"color": GREEN}, "decreasing": {"color": RED}},
-            title={"text": f"η — {format_visit_label(sel, prefix='Visita ')}", "font":{"color":"#fff","size":12}},
-            number={"suffix": "%", "font":{"color":"#fff","size":32}},
-            gauge={
-                "axis": {"range": [0,100], "tickcolor":"#8dae9d","tickfont":{"color":"#8dae9d"}},
-                "bar": {"color": bc},
-                "bgcolor": "#1a2b1a","bordercolor":"#1a2b1a",
-                "steps": [
-                    {"range":[0,30],"color":"#2d1010"},{"range":[30,60],"color":"#2d2010"},
-                    {"range":[60,85],"color":"#2d2d10"},{"range":[85,100],"color":"#102d10"},
-                ],
-                "threshold":{"line":{"color":YELLOW,"width":3},"thickness":0.85,"value":95},
-            },
-        ))
-        fig_g.update_layout(**DARK, height=280, margin=dict(l=20,r=20,t=50,b=10))
-        st.plotly_chart(fig_g, use_container_width=True)
+        if not jitter.empty:
+            fig = px.histogram(df.dropna(subset=["jitter_ms"]), x="jitter_ms", nbins=30, color_discrete_sequence=[GREEN], title="Distribución de jitter")
+            st.plotly_chart(dark(fig, 280), use_container_width=True)
+    with c2:
+        if {"lat_media", "eta_extraccion"}.issubset(df.columns):
+            valid = df.dropna(subset=["lat_media", "eta_extraccion"])
+            fig = px.scatter(valid, x="lat_media", y="eta_extraccion", color="fecha" if "fecha" in valid.columns else None, title="Latencia vs η")
+            st.plotly_chart(dark(fig, 280), use_container_width=True)
+
+    display_cols = [col for col in ["fecha", "id_muestra", "lat_media", "jitter_ms", "packet_loss", "desfase_medio_ms", "eta_extraccion"] if col in df.columns]
+    st.dataframe(df[display_cols], use_container_width=True, height=320)
+    st.download_button(
+        "Descargar CSV",
+        data=df.to_csv(index=False).encode("utf-8"),
+        file_name="fincadiag_trazabilidad.csv",
+        mime="text/csv",
+    )
+
+
+def render_parsing_quality(parsing_df: pd.DataFrame):
+    """Panel de calidad de parsing - Ingeniería inversa de datos"""
+    st.markdown('<div class="sec">Calidad de Parsing</div>', unsafe_allow_html=True)
+
+    if parsing_df.empty:
+        st.info("No hay datos de parsing disponibles en este lote.")
+        return
+
+    # KPIs principales de parsing
+    total_sessions = len(parsing_df)
+    serial_available = int(parsing_df["serial_available"].sum())
+    pcap_available = int(parsing_df["pcap_available"].sum())
+    field_validation_available = int(parsing_df["field_validation_available"].sum())
+
+    total_malformed_lines = int(parsing_df["serial_malformed_lines"].sum() + parsing_df["antenna_udp_malformed_lines"].sum())
+    total_unparsed_lines = int(parsing_df["serial_unparsed_lines"].sum())
+
+    # Métricas de parser vs campo (solo sesiones con validación)
+    field_sessions = parsing_df[parsing_df["field_validation_available"]]
+    if not field_sessions.empty:
+        avg_coverage = float(field_sessions["parser_coverage_rate_vs_field"].mean())
+        total_parser_events = int(field_sessions["parser_event_count"].sum())
+        total_missing = int(field_sessions["parser_missing_count_vs_field"].sum())
+        total_excess = int(field_sessions["parser_excess_count_vs_field"].sum())
+    else:
+        avg_coverage = 0.0
+        total_parser_events = 0
+        total_missing = 0
+        total_excess = 0
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        render_kpi("Serial parseado", f"{serial_available}/{total_sessions}", "sesiones con serial", "info")
+    with c2:
+        render_kpi("PCAP parseado", f"{pcap_available}/{total_sessions}", "sesiones con PCAP", "info")
+    with c3:
+        render_kpi("Validación campo", f"{field_validation_available}/{total_sessions}", "sesiones con contraste", "info")
+    with c4:
+        severity_class = "warn" if total_malformed_lines > 0 else ""
+        render_kpi("Líneas malformadas", str(total_malformed_lines), "serial + antena", severity_class)
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        severity_class = "warn" if total_unparsed_lines > 0 else ""
+        render_kpi("Líneas no parseadas", str(total_unparsed_lines), "serial no procesadas", severity_class)
+    with c2:
+        coverage_class = "alert" if avg_coverage < 0.8 else "warn" if avg_coverage < 0.9 else ""
+        render_kpi("Cobertura parser", f"{avg_coverage:.1%}", "promedio vs campo", coverage_class)
+    with c3:
+        render_kpi("Eventos parser", str(total_parser_events), "reconstruidos", "info")
+    with c4:
+        severity_class = "warn" if total_missing > 0 else ""
+        render_kpi("Eventos faltantes", str(total_missing), "parser vs campo", severity_class)
+
+    # Gráficas de distribución
+    st.markdown('<div class="sec">Distribución de calidad</div>', unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        # Distribución de líneas malformadas
+        serial_malformed = parsing_df[parsing_df["serial_available"]]["serial_malformed_lines"]
+        if not serial_malformed.empty:
+            fig = px.histogram(
+                serial_malformed,
+                nbins=20,
+                title="Distribución de líneas malformadas (Serial)",
+                color_discrete_sequence=[ORANGE],
+            )
+            st.plotly_chart(dark(fig, 280), use_container_width=True)
 
     with c2:
-        # Composición de sesiones
-        st.markdown("**Composición de sesiones**")
-        df_comp = pd.DataFrame({
-            "Tipo": ["PCAP", "Serial", "Collar/Antena", "Solo baseline"],
-            "Sesiones": [
-                pcaps, ser, collar,
-                max(0, sess - max(pcaps, ser, collar))
-            ]
-        })
-        fig_comp = px.bar(df_comp, x="Sesiones", y="Tipo", orientation="h",
-                          color="Tipo",
-                          color_discrete_sequence=[BLUE, GREEN, YELLOW, "#555"])
-        fig_comp.update_layout(**DARK, height=280, margin=dict(l=0,r=0,t=10,b=0),
-                               showlegend=False)
-        st.plotly_chart(fig_comp, use_container_width=True)
+        # Distribución de cobertura del parser
+        if not field_sessions.empty:
+            fig = px.histogram(
+                field_sessions["parser_coverage_rate_vs_field"],
+                nbins=20,
+                title="Distribución de cobertura parser vs campo",
+                color_discrete_sequence=[GREEN],
+            )
+            fig.add_vline(x=0.9, line_dash="dash", line_color=YELLOW, annotation_text="90%")
+            fig.add_vline(x=0.8, line_dash="dot", line_color=ORANGE, annotation_text="80%")
+            st.plotly_chart(dark(fig, 280), use_container_width=True)
 
-    # Tabla de contexto
-    st.markdown("**Detalle técnico de la visita**")
-    detalle = pd.DataFrame({
-        "Parámetro": [
-            "η extracción", "Multicast %", "Desfase medio (ms)",
-            "Alertas altas", "Alertas críticas",
-            "Sesiones PCAP", "Sesiones Serial", "Sesiones Collar",
-            "Clasificación de riesgo",
-        ],
-        "Valor": [
-            f"{eta:.2f}%", f"{mc_v:.2f}%", f"{def_v:.2f} ms",
-            alts, crit, pcaps, ser, collar,
-            "Alto" if (crit>0 or eta<30) else "Elevado" if (alts>2 or eta<60) else "Guarded" if eta<85 else "Bajo",
-        ],
-        "Referencia TFG": [
-            "Meta: 95% | Línea base: 0.55%", "Umbral: 15%", "Jitter máx.: 71.3 ms",
-            "—", "—", "—", "—", "—", "IEC 62443",
-        ],
-    })
-    st.dataframe(detalle, hide_index=True, use_container_width=True)
+    # Tabla resumen por sesión
+    st.markdown('<div class="sec">Detalle por sesión</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────────────────────────────────────
-def main():
-    st.sidebar.title("🐄 FincaDiag")
+    display_df = parsing_df.copy()
+    display_df["Visita"] = display_df["visit_name"].astype(str).map(lambda x: format_visit_label(x, "V"))
+    display_df["Serial"] = display_df["serial_available"].map(lambda x: "✓" if x else "✗")
+    display_df["PCAP"] = display_df["pcap_available"].map(lambda x: "✓" if x else "✗")
+    display_df["Campo"] = display_df["field_validation_available"].map(lambda x: "✓" if x else "✗")
+    display_df["Malformadas"] = display_df["serial_malformed_lines"] + display_df["antenna_udp_malformed_lines"]
+    display_df["No parseadas"] = display_df["serial_unparsed_lines"]
+    display_df["Eventos parser"] = display_df["parser_event_count"]
+    display_df["Cobertura %"] = (display_df["parser_coverage_rate_vs_field"] * 100).round(1)
+    display_df["Delta"] = display_df["parser_event_delta_vs_field"]
 
-    resumen_path = PROCESSED_DIR / "global" / "resumen_arbol"
-    if not resumen_path.exists():
-        st.error(f"Carpeta no encontrada: {resumen_path}")
-        st.info("Revisa que la carpeta 'data' esté en el nivel correcto del proyecto.")
-        return
-
-    runs = sorted(
-        [
-            (p.stem.replace("_summary", ""), p)
-            for p in resumen_path.rglob("*_summary.json")
-            if "old" not in {part.lower() for part in p.relative_to(resumen_path).parts}
-        ],
-        reverse=True,
+    cols_to_show = ["Visita", "Serial", "PCAP", "Campo", "Malformadas", "No parseadas", "Eventos parser", "Cobertura %", "Delta"]
+    st.dataframe(
+        display_df[cols_to_show],
+        use_container_width=True,
+        height=400,
+        hide_index=True,
+        column_config={
+            "Malformadas": st.column_config.NumberColumn(format="%d", width="small"),
+            "No parseadas": st.column_config.NumberColumn(format="%d", width="small"),
+            "Eventos parser": st.column_config.NumberColumn(format="%d", width="small"),
+            "Cobertura %": st.column_config.NumberColumn(format="%.1f", width="small"),
+            "Delta": st.column_config.NumberColumn(format="%d", width="small"),
+        },
     )
+
+
+def main():
+    st.sidebar.title("FincaDiag")
+    runs = available_runs()
     if not runs:
-        st.warning("No se encontraron lotes con el filtro actual.")
+        st.error(f"No se encontraron lotes en {PROCESSED_DIR / 'global' / 'resumen_arbol'}")
         return
 
-    sel_label = st.sidebar.selectbox("Lote", [r[0] for r in runs])
-    sel_path  = dict(runs)[sel_label]
+    selected_label = st.sidebar.selectbox("Lote", [label for label, _ in runs])
+    run_map = dict(runs)
+    summary_path = run_map[selected_label]
 
-    with open(sel_path, "r", encoding="utf-8") as f:
-        summary = json.load(f)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    visits_df = load_visits(summary_path, selected_label)
+    corr_df = load_corr(summary_path, selected_label)
+    db_df = get_db()
 
-    # Info de lote en sidebar
+    # Actualizar visits_df con contadores reales de alertas por visita desde archivos alerts.json
+    alert_counts = {}
+    if "visit_name" in visits_df.columns:
+        for vname in visits_df["visit_name"].dropna().unique():
+            alerts_df = load_visit_alerts(vname)
+            if not alerts_df.empty:
+                focus_df = alerts_df[alerts_df["severity"].isin(["Critica", "Alta"])]
+                alert_counts[vname] = {
+                    "altas": int((focus_df["severity"] == "Alta").sum()),
+                    "criticas": int((focus_df["severity"] == "Critica").sum()),
+                }
+            else:
+                alert_counts[vname] = {"altas": 0, "criticas": 0}
+
+        visits_df["total_alertas_altas"] = visits_df["visit_name"].map(lambda x: alert_counts.get(x, {}).get("altas", 0))
+        visits_df["total_alertas_criticas"] = visits_df["visit_name"].map(lambda x: alert_counts.get(x, {}).get("criticas", 0))
+    else:
+        # Si no hay columna visit_name, inicializar con 0
+        visits_df["total_alertas_altas"] = 0
+        visits_df["total_alertas_criticas"] = 0
+
+    # Calcular totales del lote desde datos reales para el sidebar
+    total_high = sum(v["altas"] for v in alert_counts.values())
+    total_critical = sum(v["criticas"] for v in alert_counts.values())
+
     st.sidebar.markdown("---")
-    total_vis = int(summary.get("total_visits", 0) or 0)
-    total_ses = int(summary.get("total_sessions", 0) or 0)
-    altas_s   = int(summary.get("total_alertas_altas", 0) or 0)
-    crit_s    = int(summary.get("total_alertas_criticas", 0) or 0)
-
     st.sidebar.markdown("**Resumen del lote**")
-    st.sidebar.markdown(f"🗂 Visitas: **{total_vis}**")
-    st.sidebar.markdown(f"📋 Sesiones: **{total_ses}**")
-    st.sidebar.markdown(f"Alertas altas: **{altas_s}**")
-    if crit_s > 0:
-        st.sidebar.markdown(f"🔴 Alertas críticas: **{crit_s}**")
-
+    st.sidebar.markdown(f"Visitas: **{int(summary.get('total_visits', 0) or 0)}**")
+    st.sidebar.markdown(f"Sesiones: **{int(summary.get('total_sessions', 0) or 0)}**")
+    st.sidebar.markdown(f"Alertas altas: **{total_high}**")
+    st.sidebar.markdown(f"Alertas críticas: **{total_critical}**")
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**Referencias TFG**")
-    st.sidebar.markdown(f"η línea base: **0.55%**")
-    st.sidebar.markdown(f"η meta: **95%**")
-    st.sidebar.markdown(f"Jitter máx.: **71.3 ms**")
-    st.sidebar.markdown(f"Ruido UDP: **43.29 Hz**")
-
+    st.sidebar.markdown("**Criterios operativos**")
+    st.sidebar.markdown(f"Cobertura fuerte η: **≥{ETA_STRONG_THRESHOLD:.0f}%**")
+    st.sidebar.markdown(f"Cobertura parcial η: **≥{ETA_PARTIAL_THRESHOLD:.0f}%**")
+    st.sidebar.markdown(f"Multicast de atención: **>{MULTICAST_ATTENTION_THRESHOLD:.0f}%**")
+    st.sidebar.markdown(f"Desfase de atención: **>{TIMING_ATTENTION_THRESHOLD_MS:.0f} ms**")
     st.sidebar.markdown("---")
-    st.sidebar.caption("FincaDiag")
+    st.sidebar.caption("Dashboard alineado al motor operativo actual")
 
-    tab_gen, tab_vis, tab_sync, tab_trace = st.tabs([
-        "📊 Panel General",
-        "🔍 Por visita",
-        "🎯 Sincronía Edge",
-        "📚 Trazabilidad SQL",
-    ])
+    # Cargar datos de parsing para la nueva pestaña
+    parsing_df = load_parsing_data(summary_path, selected_label)
 
-    with tab_gen:
-        tab_general(sel_label, sel_path, summary)
-    with tab_vis:
-        tab_por_visita(sel_label, sel_path)
-    with tab_sync:
-        tab_sincronia(sel_label, sel_path)
-    with tab_trace:
-        tab_trazabilidad()
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["Panel general", "Por visita", "Sincronía", "Calidad de Parsing", "Trazabilidad SQL"]
+    )
+    with tab1:
+        render_general(summary, visits_df, corr_df, db_df, total_critical, total_high)
+    with tab2:
+        render_visit_detail(visits_df)
+    with tab3:
+        render_sync(corr_df)
+    with tab4:
+        render_parsing_quality(parsing_df)
+    with tab5:
+        render_trazabilidad(db_df)
 
 
 if __name__ == "__main__":
