@@ -22,10 +22,12 @@ def _load_known_hosts() -> dict:
     return {"by_mac": {}, "by_ip": {}, "oui": {}}
 
 
+# Se carga una sola vez al importar el módulo; si el archivo no existe el dict queda vacío y las funciones de etiquetado no fallan.
 _KNOWN_HOSTS = _load_known_hosts()
 
 
 def _label(mac: str = "", ip: str = "") -> str:
+    # Prioridad: MAC exacta > IP > prefijo OUI (primeros 8 caracteres XX:XX:XX).
     mac_up = mac.upper() if mac else ""
     entry = _KNOWN_HOSTS["by_mac"].get(mac_up)
     if not entry and ip:
@@ -688,6 +690,7 @@ def build_pcap_alerts(pcap: dict, session_type: str = "capture") -> tuple[list[d
             )
         )
 
+    # Más de 2 flujos inseguros del mismo origen se consolidan en una sola alerta para evitar ruido repetitivo.
     if len(insecure_flows) > 2:
         src_ips = set(f["src_ip"] for f in insecure_flows)
         total_pkts = sum(f["packets"] for f in insecure_flows)
@@ -872,6 +875,7 @@ def build_pcap_alerts(pcap: dict, session_type: str = "capture") -> tuple[list[d
 
 
 def build_correlation_alerts(correlation: dict, serial: dict, pcap: dict, baseline: dict, session_type: str = "capture", operation_mode: str = "indeterminado") -> list[dict]:
+    # Solo aplica a sesiones de ordeño completo con soporte serial y PCAP simultáneos.
     alerts = []
     general = pcap.get("general", {})
 

@@ -166,7 +166,7 @@ def parse_pcap_file(path: Path, target_ip: str, target_port: int, signature_hex:
                         event_kind="firma_56d100" if has_signature else "payload_port_6001",
                         has_signature=has_signature,
                         is_multicast=is_multicast_packet(packet),
-                        payload_hex=payload_bytes.hex(" ").upper()[:180],
+                        payload_hex=payload_bytes.hex(" ").upper()[:180],  # se recorta a 180 chars para no saturar los JSONs de salida
                     )
                 )
 
@@ -209,6 +209,7 @@ def parse_pcap_file(path: Path, target_ip: str, target_port: int, signature_hex:
         }
         for (src_ip, dst_ip, protocol, dport), count in sorted(insecure_flows.items(), key=lambda x: x[1], reverse=True)
     ]
+    # 0.0.0.0 es la IP origen de los ARP Probe del DHCP (RFC 5227) y no representa un conflicto real.
     arp_ip_conflicts = [
         {"ip": ip, "macs": sorted(list(macs))}
         for ip, macs in arp_ip_to_macs.items()

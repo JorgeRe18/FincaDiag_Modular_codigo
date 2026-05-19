@@ -17,6 +17,7 @@ def _map_serial_event(anchor_kind: str) -> str:
 def correlate_events(serial: dict, network_events: list[dict], window_ms: int) -> dict:
     serial_candidates = []
     for event in serial.get("cow_events", []):
+        # Se prefiere E2 (tag leído) como ancla porque marca la lectura del collar; C2 (fotocelda) es el fallback.
         anchor_ts_ms = event.get("first_e2_ts_ms")
         anchor_timestamp = event.get("first_e2_timestamp", "")
         anchor_kind = "E2"
@@ -50,6 +51,7 @@ def correlate_events(serial: dict, network_events: list[dict], window_ms: int) -
             "matches": [],
         }
 
+    # Si hay firmas 56 D1 00 se usan como ancla de red de alta confianza; si no, se usa todo el canal 6001.
     signature_candidates = [row for row in network_events if row["event_kind"] == "firma_56d100"]
     if signature_candidates:
         candidate_events = sorted(signature_candidates, key=lambda row: row["day_ms"])
@@ -62,6 +64,7 @@ def correlate_events(serial: dict, network_events: list[dict], window_ms: int) -
     matches = []
 
     for serial_row in sorted(serial_candidates, key=lambda row: row["ts_ms"]):
+        # bisect ubica el punto de inserción; los dos vecinos inmediatos son los únicos candidatos válidos de mínimo delta.
         pos = bisect_left(network_times, serial_row["ts_ms"])
         best = None
         for idx in (pos - 1, pos):
