@@ -212,12 +212,12 @@ def parse_pcap_file(path: Path, target_ip: str, target_port: int, signature_hex:
     arp_ip_conflicts = [
         {"ip": ip, "macs": sorted(list(macs))}
         for ip, macs in arp_ip_to_macs.items()
-        if len(macs) > 1
+        if len(macs) > 1 and ip != "0.0.0.0"
     ]
     arp_mac_conflicts = [
-        {"mac": mac, "ips": sorted(list(ips))}
+        {"mac": mac, "ips": sorted(list(real_ips))}
         for mac, ips in arp_mac_to_ips.items()
-        if len(ips) > 1
+        if len(real_ips := ips - {"0.0.0.0"}) > 1
     ]
 
     return {

@@ -1,0 +1,200 @@
+{
+  "metadata": {
+    "source": "nmap -sn -PR --send-eth 172.24.28.0/23",
+    "scan_date": "2026-05-19T01:05:40",
+    "scan_host": "172.24.28.182 (Raspberry Pi FincaDiag)",
+    "subnet": "172.24.28.0/23",
+    "total_hosts_up": 19
+  },
+  "hosts": [
+    {
+      "ip": "172.24.28.1",
+      "mac": "08:CC:A7:29:A0:DB",
+      "vendor": "Cisco Systems",
+      "role": "router_principal",
+      "label": "Router/Gateway LAN",
+      "expected": true,
+      "notes": "Puerta de enlace principal de la red de la lechería"
+    },
+    {
+      "ip": "172.24.28.2",
+      "mac": "18:D6:C7:05:CF:6D",
+      "vendor": "TP-Link Technologies",
+      "role": "switch_gs305e",
+      "label": "Switch TP-Link GS305E (port mirroring activo)",
+      "expected": true,
+      "notes": "Switch con port mirroring configurado para captura pasiva FincaDiag"
+    },
+    {
+      "ip": "172.24.28.17",
+      "mac": "08:92:04:E5:11:F2",
+      "vendor": "Dell",
+      "role": "pc_captura",
+      "label": "PC Dell - nodo de captura",
+      "expected": true,
+      "notes": "Equipo de captura FincaDiag. Genera tráfico HTTP hacia IPs públicas (navegación web). No es un incidente de seguridad."
+    },
+    {
+      "ip": "172.24.28.20",
+      "mac": "00:11:32:6A:8F:09",
+      "vendor": "Synology Incorporated",
+      "role": "nas",
+      "label": "NAS Synology",
+      "expected": true,
+      "notes": "Almacenamiento en red de la finca"
+    },
+    {
+      "ip": "172.24.28.77",
+      "mac": "20:B0:01:34:C2:C4",
+      "vendor": "Technicolor",
+      "role": "modem_wan",
+      "label": "Módem/Router WAN Technicolor",
+      "expected": true,
+      "notes": "Equipo de acceso a internet del proveedor"
+    },
+    {
+      "ip": "172.24.28.87",
+      "mac": "F4:B8:5E:FB:A7:2E",
+      "vendor": "Texas Instruments",
+      "role": "iot_device",
+      "label": "Dispositivo IoT - Texas Instruments #1",
+      "expected": true,
+      "notes": "Posiblemente concentrador o lector RFID del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.28.91",
+      "mac": "68:C9:0B:02:D8:37",
+      "vendor": "Texas Instruments",
+      "role": "iot_device",
+      "label": "Dispositivo IoT - Texas Instruments #2",
+      "expected": true,
+      "notes": "Posiblemente concentrador o lector RFID del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.28.102",
+      "mac": "68:C9:0B:03:E9:A5",
+      "vendor": "Texas Instruments",
+      "role": "iot_device",
+      "label": "Dispositivo IoT - Texas Instruments #3",
+      "expected": true,
+      "notes": "Posiblemente concentrador o lector RFID del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.28.103",
+      "mac": "38:EF:E3:0F:18:08",
+      "vendor": "Ingenico Terminals SAS",
+      "role": "terminal_control",
+      "label": "Terminal Ingenico #1",
+      "expected": true,
+      "notes": "Terminal de control/punto de venta del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.28.122",
+      "mac": "98:FC:11:F3:89:F5",
+      "vendor": "Cisco-Linksys",
+      "role": "ap_wifi",
+      "label": "AP WiFi Cisco-Linksys",
+      "expected": true,
+      "notes": "Punto de acceso WiFi de la red"
+    },
+    {
+      "ip": "172.24.28.138",
+      "mac": "CC:50:E3:9A:A9:64",
+      "vendor": "Espressif",
+      "role": "iot_esp32",
+      "label": "Sensor IoT ESP32 (Espressif)",
+      "expected": true,
+      "notes": "Dispositivo ESP32/ESP8266 — posiblemente sensor ambiental o IoT auxiliar"
+    },
+    {
+      "ip": "172.24.28.199",
+      "mac": "28:94:01:8A:4A:39",
+      "vendor": "Netgear",
+      "role": "switch_ap",
+      "label": "Switch/AP Netgear",
+      "expected": true,
+      "notes": "Switch o punto de acceso de red"
+    },
+    {
+      "ip": "172.24.29.43",
+      "mac": "38:EF:E3:0E:75:14",
+      "vendor": "Ingenico Terminals SAS",
+      "role": "terminal_control",
+      "label": "Terminal Ingenico #2",
+      "expected": true,
+      "notes": "Terminal de control del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.29.79",
+      "mac": "EC:EB:B8:8B:21:AF",
+      "vendor": "Hewlett Packard Enterprise",
+      "role": "servidor_hp",
+      "label": "Servidor/Impresora HP Enterprise",
+      "expected": true,
+      "notes": "Servidor o impresora de red HP"
+    },
+    {
+      "ip": "172.24.29.156",
+      "mac": "38:EF:E3:0F:CE:81",
+      "vendor": "Ingenico Terminals SAS",
+      "role": "terminal_control",
+      "label": "Terminal Ingenico #3",
+      "expected": true,
+      "notes": "Terminal de control del sistema de ordeño"
+    },
+    {
+      "ip": "172.24.29.161",
+      "mac": "40:AE:30:AE:76:03",
+      "vendor": "TP-Link",
+      "role": "ap_wifi",
+      "label": "AP WiFi TP-Link #2",
+      "expected": true,
+      "notes": "Segundo punto de acceso WiFi"
+    },
+    {
+      "ip": "172.24.29.181",
+      "mac": "CC:D9:E9:01:12:D7",
+      "vendor": "SCR Engineers",
+      "role": "antena_collar",
+      "label": "Antena SCR — canal de telemetría collar",
+      "expected": true,
+      "notes": "DISPOSITIVO OBJETIVO. IP configurada en el motor FincaDiag (allow_target_ip). Puerto 6001 UDP/TCP. Firma 56D100."
+    },
+    {
+      "ip": "172.24.29.230",
+      "mac": "C4:E9:84:00:70:22",
+      "vendor": "TP-Link Technologies",
+      "role": "ap_wifi",
+      "label": "AP WiFi TP-Link #3",
+      "expected": true,
+      "notes": "Tercer punto de acceso WiFi"
+    },
+    {
+      "ip": "172.24.28.182",
+      "mac": null,
+      "vendor": "Raspberry Pi Foundation",
+      "role": "gateway_fincadiag",
+      "label": "Raspberry Pi — Gateway FincaDiag",
+      "expected": true,
+      "notes": "Nodo de publicación MQTT/TLS. Corre fincadiag.gateway.runtime. IP del escáner."
+    }
+  ],
+  "known_oui_prefixes": [
+    {
+      "prefix": "00:0B:82",
+      "vendor": "Grandstream Networks",
+      "role": "voip_phone",
+      "label": "Teléfono VoIP Grandstream",
+      "expected": true,
+      "notes": "Dispositivos VoIP que generan ARP Probe (0.0.0.0) al arrancar — comportamiento DHCP normal, no es conflicto ARP."
+    },
+    {
+      "prefix": "00:04:F2",
+      "vendor": "Polycom / Poly",
+      "role": "voip_phone",
+      "label": "Teléfono VoIP Polycom",
+      "expected": true,
+      "notes": "Dispositivos VoIP. Pueden no aparecer en nmap si están en standby."
+    }
+  ]
+}

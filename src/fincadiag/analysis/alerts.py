@@ -1,4 +1,45 @@
 from collections import Counter
+import json
+import os
+from pathlib import Path
+
+
+def _load_known_hosts() -> dict:
+    candidate = Path(__file__).parent.parent.parent.parent.parent / "data" / "network" / "known_hosts.json"
+    if not candidate.exists():
+        candidate = Path("data/network/known_hosts.json")
+    if candidate.exists():
+        try:
+            with open(candidate, encoding="utf-8") as f:
+                data = json.load(f)
+            by_mac = {h["mac"].upper(): h for h in data.get("hosts", []) if h.get("mac")}
+            by_ip  = {h["ip"]: h for h in data.get("hosts", []) if h.get("ip")}
+            oui    = {o["prefix"].upper(): o for o in data.get("known_oui_prefixes", [])}
+            return {"by_mac": by_mac, "by_ip": by_ip, "oui": oui}
+        except Exception:
+            pass
+    return {"by_mac": {}, "by_ip": {}, "oui": {}}
+
+
+_KNOWN_HOSTS = _load_known_hosts()
+
+
+def _label(mac: str = "", ip: str = "") -> str:
+    mac_up = mac.upper() if mac else ""
+    entry = _KNOWN_HOSTS["by_mac"].get(mac_up)
+    if not entry and ip:
+        entry = _KNOWN_HOSTS["by_ip"].get(ip)
+    if not entry and mac_up:
+        prefix = mac_up[:8]
+        entry = _KNOWN_HOSTS["oui"].get(prefix)
+    if entry:
+        return f" [{entry['label']}]"
+    return ""
+
+
+def _is_known_pc_captura(ip: str) -> bool:
+    entry = _KNOWN_HOSTS["by_ip"].get(ip, {})
+    return entry.get("role") == "pc_captura"
 
 
 SEVERITY_ORDER = {
@@ -524,12 +565,13 @@ def build_pcap_alerts(pcap: dict, session_type: str = "capture") -> tuple[list[d
 
     if arp_ip_conflicts:
         for conflict in arp_ip_conflicts:
+            mac_labels = ", ".join(m + _label(mac=m) for m in conflict["macs"])
             general_alerts.append(
                 make_alert(
                     "Critica",
                     "pcap_general",
                     "Conflicto ARP en captura",
-                    f"La IP {conflict['ip']} fue anunciada por varias MAC: {', '.join(conflict['macs'])}.",
+                    f"La IP {conflict['ip']} fue anunciada por varias MAC: {mac_labels}.",
                     "Es una firma compatible con ARP spoofing o inestabilidad de resolucion local.",
                     "Revisar respuestas ARP del gateway y aislar el segmento si la condicion persiste.",
                     timestamp=first_ts,
@@ -539,12 +581,14 @@ def build_pcap_alerts(pcap: dict, session_type: str = "capture") -> tuple[list[d
 
     if arp_mac_conflicts:
         for conflict in arp_mac_conflicts:
+            device_label = _label(mac=conflict["mac"])
+            ip_labels = ", ".join(ip + _label(ip=ip) for ip in conflict["ips"])
             general_alerts.append(
                 make_alert(
                     "Alta",
                     "pcap_general",
                     "Una MAC responde por varias IP",
-                    f"La MAC {conflict['mac']} anuncio varias IP: {', '.join(conflict['ips'])}.",
+                    f"La MAC {conflict['mac']}{device_label} anuncio varias IP: {ip_labels}.",
                     "Puede reflejar proxy ARP esperado o una condicion anomala de red.",
                     "Confirmar si corresponde al gateway o a un host no autorizado.",
                     timestamp=first_ts,
@@ -643,22 +687,46 @@ def build_pcap_alerts(pcap: dict, session_type: str = "capture") -> tuple[list[d
             )
         )
 
-    for flow in insecure_flows[:5]:
+    if len(insecure_flows) > 2:
+        src_ips = set(f["src_ip"] for f in insecure_flows)
+        total_pkts = sum(f["packets"] for f in insecure_flows)
+        all_known_pc = all(_is_known_pc_captura(ip) for ip in src_ips)
+        severity_ins = "Media" if all_known_pc else "Alta"
+        src_labels = ", ".join(ip + _label(ip=ip) for ip in sorted(src_ips))
+        note = " Origen identificado como nodo de captura del experimento." if all_known_pc else ""
         general_alerts.append(
             make_alert(
-                "Alta",
+                severity_ins,
                 "pcap_general",
                 "Protocolo inseguro observado",
-                f"Se detecto trafico {flow['protocol']} hacia puerto {flow['dst_port']} entre {flow['src_ip']} y {flow['dst_ip']} ({flow['packets']} paquetes).",
+                f"Se detectaron {len(insecure_flows)} flujos inseguros desde {src_labels} ({total_pkts} paquetes totales). Destinos: {', '.join(f['dst_ip'] for f in insecure_flows[:3])}{'...' if len(insecure_flows) > 3 else ''}.{note}",
                 "Protocolos en texto claro o sensibles pueden exponer credenciales y metadatos.",
                 "Eliminar servicios inseguros del segmento o encapsularlos en un entorno controlado.",
                 timestamp=first_ts,
-                src_ip=flow["src_ip"],
-                dst_ip=flow["dst_ip"],
-                port=flow["dst_port"],
-                protocol=flow["protocol"],
+                protocol=insecure_flows[0]["protocol"],
             )
         )
+    else:
+        for flow in insecure_flows:
+            is_pc = _is_known_pc_captura(flow["src_ip"])
+            severity_ins = "Media" if is_pc else "Alta"
+            src_label = flow["src_ip"] + _label(ip=flow["src_ip"])
+            note = " Origen identificado como nodo de captura del experimento." if is_pc else ""
+            general_alerts.append(
+                make_alert(
+                    severity_ins,
+                    "pcap_general",
+                    "Protocolo inseguro observado",
+                    f"Se detecto trafico {flow['protocol']} hacia puerto {flow['dst_port']} entre {src_label} y {flow['dst_ip']} ({flow['packets']} paquetes).{note}",
+                    "Protocolos en texto claro o sensibles pueden exponer credenciales y metadatos.",
+                    "Eliminar servicios inseguros del segmento o encapsularlos en un entorno controlado.",
+                    timestamp=first_ts,
+                    src_ip=flow["src_ip"],
+                    dst_ip=flow["dst_ip"],
+                    port=flow["dst_port"],
+                    protocol=flow["protocol"],
+                )
+            )
 
     if top_talker_share >= 50:
         top_talker = general.get("top_talkers", [{}])[0]
