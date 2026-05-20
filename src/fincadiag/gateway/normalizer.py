@@ -6,13 +6,27 @@ from fincadiag.gateway.models import GatewayMessage
 
 
 def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    if not path.exists():
+        return {}
+    # Los JSONs pueden venir de Windows (cp1252); se prueba utf-8 primero y fallback a cp1252.
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = path.read_text(encoding="cp1252")
+    return json.loads(text)
 
 
 def _load_csv_rows(path: Path) -> list[dict]:
-    if not path.exists() or not path.read_text(encoding="utf-8").strip():
+    if not path.exists():
         return []
-    with path.open("r", encoding="utf-8", newline="") as handle:
+    # Mismo fallback de encoding que _load_json para archivos generados en Windows.
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = path.read_text(encoding="cp1252")
+    if not text.strip():
+        return []
+    with path.open("r", encoding="utf-8", newline="", errors="replace") as handle:
         return list(csv.DictReader(handle))
 
 
