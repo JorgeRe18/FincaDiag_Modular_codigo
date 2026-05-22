@@ -441,7 +441,7 @@ gateway deberia reflejar para esa sesion.
 ### Ejecutar
 
 ```powershell
-streamlit run .\src\fincadiag\dashboard\app.py
+python -m streamlit run .\src\fincadiag\dashboard\app.py
 ```
 
 El dashboard solo visualiza resultados ya procesados por el motor — no ejecuta analisis.
