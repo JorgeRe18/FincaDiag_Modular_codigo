@@ -436,7 +436,7 @@ gateway deberia reflejar para esa sesión.
 | `correlation_summary` | η, desfase_medio, matches |
 | `cow_event` | Un mensaje por evento de vaca (status, RFID, confianza, dwell) |
 
-## Dashboard
+## Dashboard — Aletheia Board
 
 ### Ejecutar
 
