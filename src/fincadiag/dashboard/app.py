@@ -7,8 +7,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+_DASHBOARD_CODENAME = "Aletheia Board"
 
-st.set_page_config(page_title="FincaDiag", layout="wide")
+st.set_page_config(page_title=_DASHBOARD_CODENAME, layout="wide")
 
 GREEN = "#27AE60"
 YELLOW = "#F4D03F"
@@ -1470,7 +1471,7 @@ def render_parsing_quality(parsing_df: pd.DataFrame):
 
 
 def main():
-    st.sidebar.title("FincaDiag")
+    st.sidebar.title(f"FincaDiag — {_DASHBOARD_CODENAME}")
     runs = available_runs()
     if not runs:
         st.error(f"No se encontraron lotes en {PROCESSED_DIR / 'global' / 'resumen_arbol'}")
@@ -1523,7 +1524,16 @@ def main():
     st.sidebar.markdown(f"Multicast de atención: **>{MULTICAST_ATTENTION_THRESHOLD:.0f}%**")
     st.sidebar.markdown(f"Desfase de atención: **>{TIMING_ATTENTION_THRESHOLD_MS:.0f} ms**")
     st.sidebar.markdown("---")
-    st.sidebar.caption("Dashboard alineado al motor operativo actual")
+    st.sidebar.caption(
+        "<div style='line-height:1.4; color:#6B8E6B; font-size:0.75rem;'>"
+        "<strong>TFG</strong><br>"
+        "Instrumentación perimetral, caracterización y evaluación del flujo de telemetría IoT en el borde<br>"
+        "<em>Caso SenseHub Dairy en la Finca La Esmeralda</em><br><br>"
+        "<strong>Elaborado:</strong> Jorge Rodríguez E.<br>"
+        "<strong>Curso:</strong> IS-2026"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     # Cargar datos de parsing para la nueva pestaña
     parsing_df = load_parsing_data(summary_path, selected_label)

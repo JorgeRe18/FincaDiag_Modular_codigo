@@ -1,24 +1,13 @@
-# Aletheia — Motor de Análisis Forense FincaDiag
+# FincaDiag Modular
 
-Motor de analisis forense de telemetria operativa para el ecosistema SenseHub Dairy
-en Finca La Esmeralda. Desarrollado como instrumento de medicion para un proyecto de
-investigacion sobre pasarelas perimetrales en entornos ganaderos con controladores
-propietarios sin documentacion publica.
+Base modular para analizar:
 
-Una **Raspberry Pi 5** instalada en la finca captura trafico serial, PCAP y UDP del
-controlador de ordeño de forma pasiva. Los datos se transfieren a una estacion Windows
-donde el motor los analiza. Los resultados normalizados se publican al broker MQTT/TLS
-local (tambien en la Raspberry Pi 5) mediante la pasarela perimetral incluida aqui.
-El motor analitico vive fuera del dashboard — cada modulo puede cambiarse sin reescribir
-el resto.
-
-Capacidades principales:
-
-- analisis de baseline de red (latencia, jitter, PLR, ARP)
-- parseo de telemetria serial propietaria (protocolo SenseHub)
-- correlacion temporal serial ↔ red para calculo de eficiencia (η)
-- deteccion de alertas por capa (baseline, serial, pcap, correlacion)
-- publicacion normalizada de eventos de ordeño via MQTT/TLS (store-and-forward)
+- baseline de red
+- telemetria serial
+- trafico PCAP
+- correlacion temporal serial <-> red
+- alertas de ciberseguridad por capa
+- reglas de prioridad para un motor perimetral
 
 ## Estructura
 
@@ -26,171 +15,23 @@ Capacidades principales:
 FincaDiag_Modular/
 ├─ data/
 │  ├─ raw/
-│  ├─ processed/
-│  └─ gateway/
-│     ├─ published/   ← JSONL y readable.json generados por el gateway
-│     └─ spool/       ← mensajes pendientes de publicar (store-and-forward)
+│  └─ processed/
 ├─ reports/
 ├─ src/
 │  └─ fincadiag/
 │     ├─ analysis/
 │     ├─ dashboard/
 │     ├─ export/
-│     ├─ gateway/     ← modulo de pasarela perimetral MQTT/TLS
-│     ├─ ingest/      ← descubrimiento y construccion de sesiones
 │     ├─ parsers/
 │     ├─ cli.py
 │     ├─ config.py
 │     ├─ models.py
 │     └─ utils.py
-├─ probe_forense/  ← scripts del instrumento forense (corren en la Raspberry Pi 5)
-│  ├─ FincaDiag.py
-│  └─ FincaScheduler.py
 ├─ main.py
 └─ requirements.txt
 ```
 
-## Requisitos de entorno
-
-- Python 3.12 o superior
-- Instalar dependencias: `pip install -r requirements.txt`
-- El proyecto usa un layout `src/`, por lo que se requiere `PYTHONPATH=src`:
-
-```powershell
-$env:PYTHONPATH = "src"
-```
-
----
-
-## Pipeline completo (end-to-end)
-
-Este es el flujo operativo completo del sistema, desde la captura en campo hasta la
-publicacion de telemetria normalizada al broker:
-
-```
-[Raspberry Pi en finca]          [Windows / estacion de analisis]        [Raspberry Pi - broker]
-        |                                      |                                    |
- Captura automatica                            |                                    |
- serial_hex.txt                                |                                    |
- captura.pcap                                  |                                    |
- antena_udp.txt                                |                                    |
-        |                                      |                                    |
-        |--- SCP / WinSCP transfer ----------->|                                    |
-        |                              python main.py --root <visita>               |
-        |                              (motor: parser + correlacion + alertas)      |
-        |                                      |                                    |
-        |                              data/processed/visits/                       |
-        |                              Visita_DD_MM_YYYY/sesiones/...               |
-        |                                      |                                    |
-        |<-- SCP / WinSCP transfer ------------|                                    |
-        |  /var/lib/fincadiag/processed/       |                                    |
-        |                                      |                                    |
- run_gateway.sh                                |                                    |
- python -m fincadiag.gateway.runtime           |                                    |
-        |                                      |                                    |
-        |--- MQTT/TLS publish ----------------------------------------------->|      |
-                                                                     broker:8883    |
-```
-
-### Pasos detallados
-
-1. **Captura en campo (Raspberry Pi)**
-   La Raspberry captura automaticamente por cron en `/home/esmeralda/FincaLogs/`.
-   Cada sesion genera una carpeta `Captura_YYYYMMDD_HHMMSS/` con los archivos de evidencia.
-
-2. **Transferencia a Windows**
-   ```powershell
-   scp -r esmeralda@<ip>:/home/esmeralda/FincaLogs/Visita_* C:\PROYECTO_TFG\Prueba_Finca\
-   ```
-
-3. **Procesamiento con el motor**
-   ```powershell
-   $env:PYTHONPATH = "src"
-   python main.py --root "C:\PROYECTO_TFG\Prueba_Finca\Visita_DD_MM_YYYY"
-   ```
-   Salida: `data/processed/visits/Visita_DD_MM_YYYY/`
-
-4. **Transferencia de sesion procesada a Raspberry**
-   ```powershell
-   scp -r "data\processed\visits\Visita_DD_MM_YYYY" esmeralda@<ip>:/var/lib/fincadiag/processed/
-   ```
-
-5. **Publicacion al broker MQTT/TLS**
-   ```bash
-   /home/esmeralda/run_gateway.sh
-   ```
-   Resultado esperado: `published=N spooled=0 failed=0`
-
----
-
-## Probe Forense — Instrumento de captura en Raspberry Pi 5
-
-La carpeta `probe_forense/` contiene los dos scripts que corren de forma autónoma en la
-Raspberry Pi 5 instalada en la finca. No requieren intervención manual una vez configurados.
-
-### Scripts
-
-| Script | Rol |
-|--------|-----|
-| `FincaScheduler.py` | Orquestador: detecta el bloque activo del timeline y lanza `FincaDiag.py` en el modo correcto |
-| `FincaDiag.py` | Ejecutor: captura serial, PCAP, Antena UDP o baseline según el modo recibido |
-
-### Timeline diario (9 bloques)
-
-El scheduler conoce el horario real de la finca y opera sin configuración adicional:
-
-```
-02:15  ORDEÑO AM  → Baseline + Serial + Antena UDP + PCAP (1h20) + Baseline
-04:34  NORMAL 1   → Baseline + Antena UDP (1h) + PCAP (1h) + Baseline
-07:23  NORMAL 2   → ...
-10:12  NORMAL 3   → ...
-13:00  ORDEÑO PM  → Baseline + Serial + Antena UDP + PCAP (1h20) + Baseline
-15:10  NORMAL 4   → ...
-17:48  NORMAL 5   → ...
-20:37  NORMAL 6   → ...
-23:26  NORMAL 7   → ...
-```
-
-Bloques **ORDEÑO**: captura serial + red completa — son las sesiones de análisis principal.
-Bloques **NORMAL**: solo telemetría de red — monitoreo continuo entre ordeños.
-
-### Modos de FincaDiag.py
-
-| Modo | Descripcion |
-|------|-------------|
-| `-m 1` | Antena UDP + PCAP filtrado puerto 6001 |
-| `-m 2` | Serial + PCAP completo (bloques ordeño) |
-| `-m 3` | Solo PCAP completo (bloques normales) |
-| `-m 4` | Baseline de red |
-| `-m 5` | Serial + Antena UDP + PCAP en paralelo |
-
-### Ejecución en Raspberry Pi
-
-El scheduler se invoca via cron cada minuto. Si el minuto actual cae dentro de un bloque
-activo, ejecuta las fases pendientes; si cae en período de descanso, no hace nada.
-
-```bash
-# Entrada en crontab (crontab -e)
-* * * * * /usr/bin/python3 /home/esmeralda/probe_forense/FincaScheduler.py
-```
-
-El scheduler es resiliente a reinicios: guarda el estado del bloque en
-`/home/esmeralda/FincaLogs/fincadiag_scheduler_state.json` y retoma desde donde se
-interrumpió si detecta que el bloque todavía está activo.
-
-Salidas generadas en `/home/esmeralda/FincaLogs/`:
-
-```
-ordeño_pm_20260512_1300/
-  Baseline_20260512_130000/
-  Captura_20260512_130500/
-    serial_hex.txt
-    captura.pcap
-    antena_udp.txt
-  Baseline_20260512_145500/
-```
-
-## Motor — Flujo recomendado
+## Flujo recomendado
 
 No necesitas copiar tus logs a mano si ya los tienes organizados por visita, toma y hora.
 
@@ -269,20 +110,6 @@ Si existen dos baselines alrededor de una captura, el sistema detecta:
 - `baseline_post`: el baseline inmediatamente posterior por timestamp
 - `baseline_usado`: por defecto el `baseline_pre`; si no existe, usa el `baseline_post`
 
-Cuando existen **ambos** (`baseline_pre` y `baseline_post`), el motor calcula ademas un
-analisis de transicion de red (`baseline_transition`) que compara el estado de la red
-antes y despues de la captura:
-
-| Campo | Descripcion |
-|-------|-------------|
-| `lat_media_delta` | Cambio de latencia media pre→post (ms) |
-| `jitter_delta` | Cambio de jitter pre→post (ms) |
-| `packet_loss_delta` | Cambio de perdida de paquetes pre→post (%) |
-| `nodos_delta` | Cambio en cantidad de nodos detectados en red |
-
-Si solo existe uno de los dos baselines, `baseline_transition.available = false` y
-los deltas quedan en `null`.
-
 Si la propia `Captura_*` ya contiene los archivos de baseline, esa carpeta se usa como
 baseline principal de la sesion.
 
@@ -304,15 +131,6 @@ Tambien soporta estos casos reales:
   dentro de la propia carpeta
 
 La correlacion solo se ejecuta cuando una sesion tiene serial y PCAP al mismo tiempo.
-
-### Distincion de capas de red
-
-El motor separa explicitamente dos tipos de analisis sobre PCAP:
-
-1. `general` — trafico LAN completo: multicast, broadcast, volumen total, top talkers
-2. `telemetry` — trafico del canal de antena: filtrado por IP/puerto objetivo, firma `56 D1 00`, eventos UDP/TCP del canal
-
-La correlacion serial ↔ red se realiza contra la capa `telemetry`, no contra el PCAP general.
 
 ### Salidas
 
@@ -380,68 +198,42 @@ reports/
         Lote_4_visitas_summary.txt
 ```
 
-## Gateway perimetral
-
-El modulo `gateway` toma una sesion ya procesada por el motor y publica sus mensajes
-normalizados a un broker MQTT/TLS. Soporta modo dry-run (escribe localmente) y modo
-produccion (publica al broker).
-
-### Dry-run (sin broker)
+## Ejecutar dashboard (Aletheia Board)
 
 ```powershell
-$env:PYTHONPATH="src"
-python -m fincadiag.gateway.runtime `
-  --session-dir "data\processed\visits\Visita_11_05_2026\sesiones\TOMA_PM__1PM__Captura_20260511_130005" `
-  --dry-run
+python -m streamlit run .\src\fincadiag\dashboard\app.py
 ```
 
-Genera los archivos `.jsonl` y `.readable.json` en `data/gateway/published/` sin
-necesitar broker activo.
+> El dashboard interno se identifica como **Aletheia Board**. El título visible de la página sigue siendo **FincaDiag**.
 
-### Publicacion real (broker MQTT/TLS)
+## Instalar dependencias
 
 ```powershell
-$env:PYTHONPATH="src"
-$env:MQTT_HOST="<ip_broker>"
-$env:MQTT_PORT="8883"
-$env:TOPIC_ROOT="fincadiag/la_esmeralda"
-$env:CA_PATH="<ruta>/ca.crt"
-$env:CERT_PATH="<ruta>/client.crt"
-$env:KEY_PATH="<ruta>/client.key"
-python -m fincadiag.gateway.runtime `
-  --session-dir "data\processed\visits\Visita_11_05_2026\sesiones\TOMA_PM__1PM__Captura_20260511_130005"
+pip install -r .\requirements.txt
 ```
 
-### Salidas del gateway
+## Filosofia
 
-Cada sesion publicada genera dos archivos en `data/gateway/published/`:
+- El motor analitico vive fuera del dashboard.
+- El dashboard solo visualiza resultados.
+- Cada modulo puede cambiarse sin reescribir el resto.
 
-- `<session_id>.jsonl` — un mensaje JSON por linea, formato de ingesta
-- `<session_id>.readable.json` — version legible con metadatos y conteos
+## Distincion de capas de red
 
-El motor tambien genera un archivo `gateway_expectations.json` por sesion procesada
-(junto a `correlation_summary.json`, `pcap_summary.json`, etc.) que sirve como
-oraculo/checklist: describe los tipos de mensajes esperados y las metricas que el
-gateway deberia reflejar para esa sesion.
+El motor separa explicitamente dos tipos de analisis sobre PCAP:
 
-### Tipos de mensaje publicados
+1. `general`
+   - trafico LAN completo
+   - multicast
+   - broadcast
+   - volumen total
+   - top talkers
 
-| Tipo | Descripcion |
-|------|-------------|
-| `session_summary` | Resumen general de la sesion |
-| `baseline_snapshot` | Estado de red al momento de la captura |
-| `pcap_summary` | Estadisticas de trafico PCAP |
-| `alerts_summary` | Conteo y severidad de alertas por capa |
-| `collar_summary` | Telemetria de collares SCR |
-| `correlation_summary` | η, desfase_medio, matches |
-| `cow_event` | Un mensaje por evento de vaca (status, RFID, confianza, dwell) |
+2. `telemetry`
+   - trafico del canal de antena/telemetria
+   - filtrado por IP objetivo y puerto objetivo
+   - firma `56 D1 00`
+   - eventos UDP y TCP del canal
 
-## Dashboard
-
-### Ejecutar
-
-```powershell
-streamlit run .\src\fincadiag\dashboard\app.py
-```
-
-El dashboard solo visualiza resultados ya procesados por el motor — no ejecuta analisis.
+La correlacion serial <-> red se realiza contra la capa `telemetry`, no contra todo el
+PCAP general.
