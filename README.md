@@ -1,6 +1,6 @@
 # Aletheia — Motor de Análisis Forense FincaDiag
 
-Motor de analisis forense de telemetria operativa para el ecosistema SenseHub Dairy
+Motor de análisis forense de telemetría operativa para el ecosistema SenseHub Dairy
 en Finca La Esmeralda. Desarrollado como instrumento de medicion para un proyecto de
 investigacion sobre pasarelas perimetrales en entornos ganaderos con controladores
 propietarios sin documentacion publica.
@@ -14,11 +14,11 @@ el resto.
 
 Capacidades principales:
 
-- analisis de baseline de red (latencia, jitter, PLR, ARP)
-- parseo de telemetria serial propietaria (protocolo SenseHub)
-- correlacion temporal serial ↔ red para calculo de eficiencia (η)
-- deteccion de alertas por capa (baseline, serial, pcap, correlacion)
-- publicacion normalizada de eventos de ordeño via MQTT/TLS (store-and-forward)
+- análisis de baseline de red (latencia, jitter, PLR, ARP)
+- parseo de telemetría serial propietaria (protocolo SenseHub)
+- correlación temporal serial ↔ red para calculo de eficiencia (η)
+- deteccion de alertas por capa (baseline, serial, pcap, correlación)
+- publicación normalizada de eventos de ordeño via MQTT/TLS (store-and-forward)
 
 ## Estructura
 
@@ -37,7 +37,7 @@ FincaDiag_Modular/
 │     ├─ dashboard/
 │     ├─ export/
 │     ├─ gateway/     ← modulo de pasarela perimetral MQTT/TLS
-│     ├─ ingest/      ← descubrimiento y construccion de sesiones
+│     ├─ ingest/      ← descubrimiento y construccion de sesiónes
 │     ├─ parsers/
 │     ├─ cli.py
 │     ├─ config.py
@@ -65,10 +65,10 @@ $env:PYTHONPATH = "src"
 ## Pipeline completo (end-to-end)
 
 Este es el flujo operativo completo del sistema, desde la captura en campo hasta la
-publicacion de telemetria normalizada al broker:
+publicación de telemetría normalizada al broker:
 
 ```
-[Raspberry Pi en finca]          [Windows / estacion de analisis]        [Raspberry Pi - broker]
+[Raspberry Pi en finca]          [Windows / estacion de análisis]        [Raspberry Pi - broker]
         |                                      |                                    |
  Captura automatica                            |                                    |
  serial_hex.txt                                |                                    |
@@ -77,7 +77,7 @@ publicacion de telemetria normalizada al broker:
         |                                      |                                    |
         |--- SCP / WinSCP transfer ----------->|                                    |
         |                              python main.py --root <visita>               |
-        |                              (motor: parser + correlacion + alertas)      |
+        |                              (motor: parser + correlación + alertas)      |
         |                                      |                                    |
         |                              data/processed/visits/                       |
         |                              Visita_DD_MM_YYYY/sesiones/...               |
@@ -96,7 +96,7 @@ publicacion de telemetria normalizada al broker:
 
 1. **Captura en campo (Raspberry Pi)**
    La Raspberry captura automaticamente por cron en `/home/esmeralda/FincaLogs/`.
-   Cada sesion genera una carpeta `Captura_YYYYMMDD_HHMMSS/` con los archivos de evidencia.
+   Cada sesión genera una carpeta `Captura_YYYYMMDD_HHMMSS/` con los archivos de evidencia.
 
 2. **Transferencia a Windows**
    ```powershell
@@ -110,7 +110,7 @@ publicacion de telemetria normalizada al broker:
    ```
    Salida: `data/processed/visits/Visita_DD_MM_YYYY/`
 
-4. **Transferencia de sesion procesada a Raspberry**
+4. **Transferencia de sesión procesada a Raspberry**
    ```powershell
    scp -r "data\processed\visits\Visita_DD_MM_YYYY" esmeralda@<ip>:/var/lib/fincadiag/processed/
    ```
@@ -151,7 +151,7 @@ El scheduler conoce el horario real de la finca y opera sin configuración adici
 23:26  NORMAL 7   → ...
 ```
 
-Bloques **ORDEÑO**: captura serial + red completa — son las sesiones de análisis principal.
+Bloques **ORDEÑO**: captura serial + red completa — son las sesiónes de análisis principal.
 Bloques **NORMAL**: solo telemetría de red — monitoreo continuo entre ordeños.
 
 ### Modos de FincaDiag.py
@@ -260,7 +260,7 @@ $visitas = @(
 python .\main.py --roots $visitas --run-name "Lote_4_visitas"
 ```
 
-El sistema tratara cada `Captura_*` como una sesion analitica y buscara el `Baseline_*`
+El sistema tratara cada `Captura_*` como una sesión analitica y buscara el `Baseline_*`
 mas cercano dentro de la misma rama de carpetas.
 
 Si existen dos baselines alrededor de una captura, el sistema detecta:
@@ -270,21 +270,21 @@ Si existen dos baselines alrededor de una captura, el sistema detecta:
 - `baseline_usado`: por defecto el `baseline_pre`; si no existe, usa el `baseline_post`
 
 Cuando existen **ambos** (`baseline_pre` y `baseline_post`), el motor calcula ademas un
-analisis de transicion de red (`baseline_transition`) que compara el estado de la red
+análisis de transicion de red (`baseline_transition`) que compara el estado de la red
 antes y despues de la captura:
 
 | Campo | Descripcion |
 |-------|-------------|
 | `lat_media_delta` | Cambio de latencia media pre→post (ms) |
 | `jitter_delta` | Cambio de jitter pre→post (ms) |
-| `packet_loss_delta` | Cambio de perdida de paquetes pre→post (%) |
+| `packet_loss_delta` | Cambio de pérdida de paquetes pre→post (%) |
 | `nodos_delta` | Cambio en cantidad de nodos detectados en red |
 
 Si solo existe uno de los dos baselines, `baseline_transition.available = false` y
 los deltas quedan en `null`.
 
 Si la propia `Captura_*` ya contiene los archivos de baseline, esa carpeta se usa como
-baseline principal de la sesion.
+baseline principal de la sesión.
 
 Si la raiz que pasas corresponde a una visita, por ejemplo:
 
@@ -299,20 +299,20 @@ Tambien soporta estos casos reales:
 - `Captura_*` con solo `serial_hex.txt`
 - `Captura_*` con solo `captura.pcap` o `captura.pcapng`
 - `Captura_*` con ambos archivos
-- cualquier carpeta `Baseline_*`, incluso dentro de visitas mixtas, se registra tambien como sesion `baseline-only`
+- cualquier carpeta `Baseline_*`, incluso dentro de visitas mixtas, se registra tambien como sesión `baseline-only`
 - `Captura_*` que ya trae `reporte.txt`, `arp_a.txt`, `ipconfig_all.txt` y `route_print.txt`
   dentro de la propia carpeta
 
-La correlacion solo se ejecuta cuando una sesion tiene serial y PCAP al mismo tiempo.
+La correlación solo se ejecuta cuando una sesión tiene serial y PCAP al mismo tiempo.
 
 ### Distincion de capas de red
 
-El motor separa explicitamente dos tipos de analisis sobre PCAP:
+El motor separa explicitamente dos tipos de análisis sobre PCAP:
 
 1. `general` — trafico LAN completo: multicast, broadcast, volumen total, top talkers
 2. `telemetry` — trafico del canal de antena: filtrado por IP/puerto objetivo, firma `56 D1 00`, eventos UDP/TCP del canal
 
-La correlacion serial ↔ red se realiza contra la capa `telemetry`, no contra el PCAP general.
+La correlación serial ↔ red se realiza contra la capa `telemetry`, no contra el PCAP general.
 
 ### Salidas
 
@@ -352,11 +352,11 @@ reports/
 En resumen:
 
 - cada visita tiene su propia carpeta
-- cada visita tiene una carpeta `por_hora` con los informes por sesion
+- cada visita tiene una carpeta `por_hora` con los informes por sesión
 - cada visita tiene una carpeta `resumen` con el consolidado de la visita
 - si procesas un arbol grande con varias visitas, tambien se genera un resumen global del arbol
 - si procesas varias visitas especificas con `--roots`, se genera un consolidado global propio del lote
-- cada sesion guarda `alerts.json` y `alerts.csv` con alertas de `baseline`, `serial`, `pcap_general`, `telemetry_6001` y `correlation`
+- cada sesión guarda `alerts.json` y `alerts.csv` con alertas de `baseline`, `serial`, `pcap_general`, `telemetry_6001` y `correlation`
 - el resumen global y el resumen por visita incluyen control por tipo de muestra:
   `SERIAL + PCAP`, `Antena + PCAP`, `PCAP`, `Baseline`
 - el resumen global incluye un bloque de alertas PCAP en lenguaje simple para lector no tecnico
@@ -382,7 +382,7 @@ reports/
 
 ## Gateway perimetral
 
-El modulo `gateway` toma una sesion ya procesada por el motor y publica sus mensajes
+El modulo `gateway` toma una sesión ya procesada por el motor y publica sus mensajes
 normalizados a un broker MQTT/TLS. Soporta modo dry-run (escribe localmente) y modo
 produccion (publica al broker).
 
@@ -414,21 +414,21 @@ python -m fincadiag.gateway.runtime `
 
 ### Salidas del gateway
 
-Cada sesion publicada genera dos archivos en `data/gateway/published/`:
+Cada sesión publicada genera dos archivos en `data/gateway/published/`:
 
 - `<session_id>.jsonl` — un mensaje JSON por linea, formato de ingesta
 - `<session_id>.readable.json` — version legible con metadatos y conteos
 
-El motor tambien genera un archivo `gateway_expectations.json` por sesion procesada
+El motor tambien genera un archivo `gateway_expectations.json` por sesión procesada
 (junto a `correlation_summary.json`, `pcap_summary.json`, etc.) que sirve como
-oraculo/checklist: describe los tipos de mensajes esperados y las metricas que el
-gateway deberia reflejar para esa sesion.
+oraculo/checklist: describe los tipos de mensajes esperados y las métricas que el
+gateway deberia reflejar para esa sesión.
 
 ### Tipos de mensaje publicados
 
 | Tipo | Descripcion |
 |------|-------------|
-| `session_summary` | Resumen general de la sesion |
+| `session_summary` | Resumen general de la sesión |
 | `baseline_snapshot` | Estado de red al momento de la captura |
 | `pcap_summary` | Estadisticas de trafico PCAP |
 | `alerts_summary` | Conteo y severidad de alertas por capa |
@@ -444,4 +444,4 @@ gateway deberia reflejar para esa sesion.
 python -m streamlit run .\src\fincadiag\dashboard\app.py
 ```
 
-El dashboard solo visualiza resultados ya procesados por el motor — no ejecuta analisis.
+El dashboard solo visualiza resultados ya procesados por el motor — no ejecuta análisis.
