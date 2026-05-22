@@ -428,10 +428,11 @@ def render_kpi(label: str, value: str, subtitle: str, tone: str = ""):
 
 def render_header(summary: dict, visits_df: pd.DataFrame, db_df: pd.DataFrame, critical_alerts: int, high_alerts: int):
     st.markdown('<div class="sec">Resumen del lote</div>', unsafe_allow_html=True)
-    eta_avg = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean())
+    eta_avg = num(summary.get("avg_eta_extraccion")) if summary.get("avg_eta_extraccion") is not None else num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean())
+    lat_avg = num(summary.get("avg_lat_media")) if summary.get("avg_lat_media") is not None else 0.0
     jitter_max = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
     offset_max = num(pd.to_numeric(db_df.get("desfase_max_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
-    multicast_avg = num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean())
+    multicast_avg = num(summary.get("avg_multicast_pct")) if summary.get("avg_multicast_pct") is not None else num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean())
     field_sessions = int(summary.get("objective_1_characterization", {}).get("sessions_with_field_validation", 0) or 0)
 
     cols = st.columns(5)
@@ -446,14 +447,17 @@ def render_header(summary: dict, visits_df: pd.DataFrame, db_df: pd.DataFrame, c
     with cols[4]:
         render_kpi("Val. campo", str(field_sessions), "sesiones con contraste", "info")
 
-    cols2 = st.columns(4)
+    cols2 = st.columns(5)
     with cols2[0]:
         render_kpi("Desfase máx.", f"{offset_max:.1f} ms", "serial-red", "warn" if offset_max > TIMING_ATTENTION_THRESHOLD_MS else "")
     with cols2[1]:
-        render_kpi("Multicast", f"{multicast_avg:.1f}%", "promedio del tráfico", "warn" if multicast_avg > MULTICAST_ATTENTION_THRESHOLD else "")
+        lat_class = "" if lat_avg > 0 else ""
+        render_kpi("Latencia promedio", f"{lat_avg:.1f} ms", "baseline del lote", lat_class)
     with cols2[2]:
-        render_kpi("Alertas altas", str(high_alerts), "conteo consolidado", "alert")
+        render_kpi("Multicast", f"{multicast_avg:.1f}%", "promedio del tráfico", "warn" if multicast_avg > MULTICAST_ATTENTION_THRESHOLD else "")
     with cols2[3]:
+        render_kpi("Alertas altas", str(high_alerts), "conteo consolidado", "alert")
+    with cols2[4]:
         render_kpi("Alertas críticas", str(critical_alerts), "conteo consolidado", "alert")
 
 
@@ -583,11 +587,12 @@ def render_executive_panel(summary: dict, visits_df: pd.DataFrame, db_df: pd.Dat
         if total_sessions_from_df != total_sessions:
             total_sessions = total_sessions_from_df
 
-    # Calcular métricas técnicas de visits_df y db_df
-    eta_avg = num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0
+    # Calcular métricas técnicas: preferir summary.json (sesiones reales) sobre visits_df (promedio simple)
+    eta_avg = num(summary.get("avg_eta_extraccion")) if summary.get("avg_eta_extraccion") is not None else (num(pd.to_numeric(visits_df.get("avg_eta_extraccion", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0)
+    lat_avg = num(summary.get("avg_lat_media")) if summary.get("avg_lat_media") is not None else 0.0
     jitter_max = num(pd.to_numeric(db_df.get("jitter_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
     offset_max = num(pd.to_numeric(db_df.get("desfase_max_ms", pd.Series(dtype=float)), errors="coerce").max()) if not db_df.empty else 0.0
-    multicast_avg = num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0
+    multicast_avg = num(summary.get("avg_multicast_pct")) if summary.get("avg_multicast_pct") is not None else (num(pd.to_numeric(visits_df.get("avg_multicast_pct", pd.Series(dtype=float)), errors="coerce").mean()) if not visits_df.empty else 0.0)
     field_sessions = int(summary.get("objective_1_characterization", {}).get("sessions_with_field_validation", 0) or 0)
 
     # Cargar alertas reales del lote para análisis detallado
@@ -624,13 +629,13 @@ def render_executive_panel(summary: dict, visits_df: pd.DataFrame, db_df: pd.Dat
         jitter_class = "warn" if jitter_max > TIMING_ATTENTION_THRESHOLD_MS else ""
         render_kpi("Jitter máx.", f"{jitter_max:.1f} ms", "SQL consolidado", jitter_class)
     with c3:
+        render_kpi("Latencia promedio", f"{lat_avg:.1f} ms", "baseline del lote", "" if lat_avg > 0 else "")
+    with c4:
         offset_class = "warn" if offset_max > TIMING_ATTENTION_THRESHOLD_MS else ""
         render_kpi("Desfase máx.", f"{offset_max:.1f} ms", "serial-red", offset_class)
-    with c4:
+    with c5:
         multicast_class = "warn" if multicast_avg > MULTICAST_ATTENTION_THRESHOLD else ""
         render_kpi("Multicast", f"{multicast_avg:.1f}%", "promedio del tráfico", multicast_class)
-    with c5:
-        render_kpi("Val. campo", str(field_sessions), "sesiones con contraste", "info")
     
     # Panel de problemas detallados con alertas REALES agregadas del lote
     st.markdown('<div class="sec">Análisis Detallado de Problemas</div>', unsafe_allow_html=True)
