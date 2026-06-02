@@ -1,0 +1,192 @@
+[
+  {
+    "visit": "Visita_11_05_2026",
+    "session": "TOMA_PM__1PM__Captura_20260511_130005",
+    "matches": 8,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=24.242424242424242, matches=8"
+      }
+    }
+  },
+  {
+    "visit": "Visita_12_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260512_021505",
+    "matches": 5,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=38.46153846153847, matches=5"
+      }
+    }
+  },
+  {
+    "visit": "Visita_13_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260513_021505",
+    "matches": 6,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=18.181818181818183, matches=6"
+      }
+    }
+  },
+  {
+    "visit": "Visita_14_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260514_021505",
+    "matches": 4,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=23.52941176470588, matches=4"
+      }
+    }
+  },
+  {
+    "visit": "Visita_15_05_2026",
+    "session": "TOMA_PM__1PM__Captura_20260515_130005",
+    "matches": 12,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=27.906976744186046, matches=12"
+      }
+    }
+  },
+  {
+    "visit": "Visita_16_05_2026",
+    "session": "TOMA_PM__1PM__Captura_20260516_130005",
+    "matches": 2,
+    "results": {
+      "schema": {
+        "pass": true,
+        "msg": "message_count=14, cow_events=6"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=33.33333333333333, matches=2"
+      }
+    }
+  },
+  {
+    "visit": "Visita_17_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260517_021505",
+    "matches": 3,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=27.27272727272727, matches=3"
+      }
+    }
+  },
+  {
+    "visit": "Visita_18_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260518_021505",
+    "matches": 3,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=25.0, matches=3"
+      }
+    }
+  },
+  {
+    "visit": "Visita_19_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260519_021505",
+    "matches": 4,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=16.666666666666664, matches=4"
+      }
+    }
+  },
+  {
+    "visit": "Visita_20_05_2026",
+    "session": "TOMA_AM__2AM__Captura_20260520_021505",
+    "matches": 1,
+    "results": {
+      "schema": {
+        "pass": false,
+        "msg": "Falta tipo: field_validation_summary"
+      },
+      "idempotency": {
+        "pass": true,
+        "msg": "1 archivos identicos"
+      },
+      "objective4": {
+        "pass": true,
+        "msg": "eta=8.333333333333332, matches=1"
+      }
+    }
+  }
+]

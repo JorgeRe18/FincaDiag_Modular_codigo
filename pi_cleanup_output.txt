@@ -1,0 +1,133 @@
+============================================================
+  REORGANIZACIËN del home de esmeralda
+============================================================
+
+[1/4] Creando estructura resultados_obj4/
+  [mkdir] mkdir -p /home/esmeralda/resultados_obj4/FINALES_31mayo
+  [mkdir] mkdir -p /home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs
+
+[2/4] Moviendo resultados FINALES (31 mayo)...
+  [mv] mv /home/esmeralda/obj4_resilience_results.csv /home/esmeralda/resultados_obj4/F
+  [mv] mv /home/esmeralda/obj4_resilience.log /home/esmeralda/resultados_obj4/FINALES_3
+  [mv] mv /home/esmeralda/fault_injections.csv /home/esmeralda/resultados_obj4/FINALES_
+  [mv] mv /home/esmeralda/fault_injections.log /home/esmeralda/resultados_obj4/FINALES_
+
+[3/4] Moviendo resultados HISTORICOS (28-29 mayo)...
+  [mv] mv /home/esmeralda/mttr_results.csv /home/esmeralda/resultados_obj4/HISTORICOS_2
+  [mv] mv /home/esmeralda/mttr_stress.log /home/esmeralda/resultados_obj4/HISTORICOS_28
+  [mv] mv /home/esmeralda/mttr_systemd.log /home/esmeralda/resultados_obj4/HISTORICOS_2
+  [mv] mv /home/esmeralda/mttr_systemd_results.csv /home/esmeralda/resultados_obj4/HIST
+  [mv] mv /home/esmeralda/latency_e2e.log /home/esmeralda/resultados_obj4/HISTORICOS_28
+  [mv] mv /home/esmeralda/latency_e2e_results.csv /home/esmeralda/resultados_obj4/HISTO
+  [mv] mv /home/esmeralda/soak_results.csv /home/esmeralda/resultados_obj4/HISTORICOS_2
+  [mv] mv /home/esmeralda/soak_test.log /home/esmeralda/resultados_obj4/HISTORICOS_28_2
+  [mv] mv /home/esmeralda/obj4_bundle_2026-05-28.tar.gz /home/esmeralda/resultados_obj4
+  [mv runs] mv /home/esmeralda/obj4_runs/* /home/esmeralda/resultados_obj4/HISTORICOS_28_29m
+  [rmdir obj4_runs] rmdir /home/esmeralda/obj4_runs 2>/dev/null || true
+
+[4/4] Eliminando archivos obsoletos...
+  [rm] rm -rf /home/esmeralda/FincaScheduler.py.bak_obj4_28may
+  [rm] rm -rf /home/esmeralda/__pycache__
+  [rm] rm -rf /home/esmeralda/obj4_bundle_2026-05-28.tar.gz.md5
+  [rm] rm -rf /home/esmeralda/fincadiag_cron.log
+  [rm] rm -rf /home/esmeralda/fincadiag_scheduler.log
+  [rm] rm -rf /home/esmeralda/latency_e2e_pi.sh
+  [rm] rm -rf /home/esmeralda/mttr_stress_pi.sh
+  [rm] rm -rf /home/esmeralda/mttr_systemd_pi.sh
+  [rm] rm -rf /home/esmeralda/network_failure_pi.sh
+  [rm] rm -rf /home/esmeralda/power_failure_sim_pi.sh
+  [rm] rm -rf /home/esmeralda/schedule_obj4_pi.sh
+  [rm] rm -rf /home/esmeralda/setup_cron_export.sh
+  [rm] rm -rf /home/esmeralda/soak_test_pi.sh
+  [rm] rm -rf /home/esmeralda/suspend_intermediate_captures_pi.sh
+
+============================================================
+  ESTADO FINAL
+============================================================
+
+--- /home/esmeralda/ ---
+    total 180
+drwx------ 8 esmeralda esmeralda  4096 Jun  1 02:17 .
+drwxr-xr-x 3 root      root       4096 Dec  4 08:48 ..
+-rw------- 1 esmeralda esmeralda 22310 May 27 02:52 .bash_history
+-rw-r--r-- 1 esmeralda esmeralda   220 Dec  4 08:40 .bash_logout
+-rw-r--r-- 1 esmeralda esmeralda  3523 Dec  4 08:40 .bashrc
+drwxr-xr-x 3 esmeralda esmeralda  4096 Dec  4 08:48 .config
+drwxrwxr-x 3 esmeralda esmeralda  4096 May 20 00:23 data
+drwxrwxr-x 2 esmeralda esmeralda  4096 May 30 20:33 exports
+-rw-r--r-- 1 root      root       2217 May 22 23:20 export_visita_pi.sh
+-rw-r--r-- 1 root      root      41220 Apr  5 01:03 FincaDiag.py
+drwxrwxr-x 4 esmeralda esmeralda  4096 Jun  1 02:17 FincaLogs
+-rw-r--r-- 1 esmeralda esmeralda 24546 May 31 02:46 FincaScheduler.py
+-rwxrwxr-x 1 esmeralda esmeralda  4567 May 31 02:46 inject_fault_live_pi.sh
+drwxrwxr-x 3 esmeralda esmeralda  4096 Mar 19 22:36 .local
+-rwxrwxr-x 1 esmeralda esmeralda  3090 May 31 02:46 measure_live_resilience_pi.sh
+-rw-rw-r-- 1 esmeralda esmeralda 12581 May 31 05:22 obj4_resilience_staged.py
+-rw-r--r-- 1 esmeralda esmeralda   807 Dec  4 08:40 .profile
+drwxrwxr-x 4 esmeralda esmeralda  4096 Jun  1 02:16 resultados_obj4
+-rwxrwxr-x 1 esmeralda esmeralda   485 May 10 23:32 run_gateway.sh
+-rw-r--r-- 1 esmeralda esmeralda     0 Mar  4 19:05 .sudo_as_admin_successful
+-rw-rw-r-- 1 esmeralda esmeralda   202 Mar 21 15:27 .wget-hsts
+
+--- resultados_obj4/ ---
+    /home/esmeralda/resultados_obj4
+/home/esmeralda/resultados_obj4/FINALES_31mayo
+/home/esmeralda/resultados_obj4/FINALES_31mayo/fault_injections.csv
+/home/esmeralda/resultados_obj4/FINALES_31mayo/fault_injections.log
+/home/esmeralda/resultados_obj4/FINALES_31mayo/obj4_resilience.log
+/home/esmeralda/resultados_obj4/FINALES_31mayo/obj4_resilience_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/latency_e2e.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/latency_e2e_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/mttr_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/mttr_stress.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/mttr_systemd.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/mttr_systemd_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/obj4_bundle_2026-05-28.tar.gz
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_bundle_dia1.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_extra_network.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_extra_power.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_extra_soak2h_am.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run1_latency.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run1_mttr.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run1_soak.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run2b_latency.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run2_latency.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run2_mttr.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run2_soak.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run3_latency.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-28_run3_soak.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/2026-05-29_mttr_systemd.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/conservados
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/conservados/network_failure.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/conservados/network_failure_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/conservados/power_failure.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/conservados/power_failure_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/latency_e2e.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/latency_e2e_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/mttr_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/mttr_stress.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/network_failure_results_run1_OK.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/network_failure_run1_OK.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/power_failure_results_run1_OK.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/power_failure_run1_OK.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/soak_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/descartados_run1/soak_test.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/run2_latency_buggy
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/run2_latency_buggy/latency_e2e.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/run2_latency_buggy/latency_e2e_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/latency_e2e.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/latency_e2e_postfix.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/latency_e2e_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/latency_e2e_results_postfix.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/mttr_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/mttr_stress.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/soak_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/runs/validacion/soak_test.log
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/soak_results.csv
+/home/esmeralda/resultados_obj4/HISTORICOS_28_29mayo/soak_test.log
+
+=== Reorganizaci¾n completada ===

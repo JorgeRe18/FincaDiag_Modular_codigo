@@ -1,0 +1,57 @@
+% ============================================================
+% SNIPPET PARA CAPÍTULO 4 — Tabla síntesis del protocolo estadístico
+% Reemplaza / complementa la descripción textual del protocolo
+% en la subsección "Validación estadística y resiliencia operativa"
+% ============================================================
+
+\begin{table}[H]
+\centering
+\caption{Síntesis del protocolo de validación estadística y operativa del Objetivo~4.}
+\label{tab:protocolo_obj4}
+\footnotesize
+\renewcommand{\arraystretch}{1.22}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{2.8cm}|>{\centering\arraybackslash}p{1.8cm}|>{\centering\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\rowcolor{gray!20}
+\TableHeaderFirst{Métrica} & \TableHeader{$n$ mínimo} & \TableHeader{Contraste} & \TableHeader{Referencia} \\ \hline
+
+Eficiencia de extracci\'on ($\eta$) &
+$n_{\text{pre}}=64$,\par $n_{\text{post}}=38$ &
+U de Mann--Whitney unilateral (ejecutado) &
+$H_1{:}\;\eta_{\text{post}} > \eta_{\text{pre}}$;\; $\bar{\eta}_{\text{pre}}=4{,}49\%$, $\bar{\eta}_{\text{post}}=22{,}80\%$. \\ \hline
+
+Pérdida de paquetes (\acs{PLR}) &
+$\geq 30$ &
+U de Mann--Whitney unilateral &
+$H_1{:}\;\text{PLR}_{\text{post}} < \text{PLR}_{\text{pre}}$. \\ \hline
+
+\acs{MTTR} broker / red / proceso &
+$\geq 30$ por modo &
+Descriptiva $+$ \acs{IC} 95\,\% &
+Umbral de referencia técnica: $< 60\,\text{s}$. \\ \hline
+
+Latencia extremo a extremo &
+$\geq 45$ ciclos &
+Descriptiva $+$ \acs{IC} 95\,\% &
+Medida desde publicación en gateway hasta recepción en suscriptor. \\ \hline
+
+Soak / estabilidad &
+$\geq 6\,\text{h}$ continuas &
+Tendencia de memoria y \acs{CPU} &
+Umbral: sin degradación acumulada ni spool residual. \\ \hline
+
+Neutralidad \acs{RS-232} &
+2 capturas (osciloscopio) &
+Cualitativa &
+Forma de onda sin perturbación visible en bus original. \\ \hline
+
+\end{tabularx}
+\end{table}
+
+La elección del test U de Mann--Whitney como contraste principal se fija
+\textit{a priori}, antes de disponer de los datos posteriores. Esta decisión se
+justifica por la distribución de la muestra previa: el 54,7\,\% de los valores
+de $\eta$ son nulos y la distribución presenta asimetría positiva marcada, lo
+que hace improbable superar la normalidad en la prueba de Shapiro--Wilk
+($\alpha=0{,}05$). El uso sistemático del contraste no paramétrico elimina la
+necesidad de seleccionar retroactivamente el test más favorable.

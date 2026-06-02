@@ -1,0 +1,54 @@
+{
+  "fecha": "2026-05-22",
+  "rango_visitas": "11-20/05/2026",
+  "pruebas_windows": {
+    "descripcion": "Schema + Idempotencia + Objetivo4",
+    "resultados": [
+      {"visit": "Visita_11_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_12_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_13_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_14_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_15_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_16_05_2026", "schema": "PASS", "idempotency": "PASS", "objective4": "PASS", "overall": "PASS"},
+      {"visit": "Visita_17_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_18_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_19_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_20_05_2026", "schema": "FAIL", "idempotency": "PASS", "objective4": "PASS", "overall": "FAIL"}
+    ],
+    "notas": {
+      "schema_fail_razon": "field_validation_summary no disponible en 9/10 visitas (sesiones sin validacion de campo)",
+      "idempotencia": "100% pass (10/10)",
+      "objective4": "100% pass (10/10)"
+    }
+  },
+  "pruebas_raspberry_pi": {
+    "descripcion": "Schema + TLS + Resilience + Subscribe + Idempotencia + Objetivo4",
+    "resultados": [
+      {"visit": "Visita_11_05_2026", "schema": "PASS", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_12_05_2026", "schema": "FAIL", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_13_05_2026", "schema": "FAIL", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_14_05_2026", "schema": "FAIL", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_15_05_2026", "schema": "FAIL", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_16_05_2026", "schema": "PASS", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_17_05_2026", "schema": "PASS", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_18_05_2026", "schema": "FAIL", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_19_05_2026", "schema": "PASS", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"},
+      {"visit": "Visita_20_05_2026", "schema": "PASS", "tls": "PASS", "resilience": "PASS", "subscribe": "PASS", "idempotency": "FAIL", "objective4": "PASS", "overall": "FAIL"}
+    ],
+    "notas": {
+      "schema_fail_razon": "field_validation_summary no disponible en algunas visitas (mismo issue que Windows)",
+      "idempotency_fail_razon": "Scripts de prueba no limpian published/ entre corridas; archivos residuales causan divergencia de checksums",
+      "tls": "100% pass (10/10)",
+      "resilience": "100% pass (10/10)",
+      "subscribe": "100% pass (10/10)",
+      "objective4": "100% pass (10/10)"
+    }
+  },
+  "sensibilidad_ventana": {
+    "sesiones_analizadas": 22,
+    "eta_media_250ms": "20.80%",
+    "eta_media_300ms": "25.96%",
+    "ganancia_promedio_pp": "+5.16",
+    "sesiones_con_mejora": "12/22"
+  }
+}

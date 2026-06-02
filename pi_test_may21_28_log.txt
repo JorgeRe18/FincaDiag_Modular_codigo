@@ -1,0 +1,111 @@
+[17:26:23] === CONECTANDO ===
+[17:26:52] Connected to Pi
+[17:26:53] Mosquitto status: active
+[17:26:53] 
+==================================================
+[17:26:53] === Visita_21: TOMA_PM__1PM__Captura_20260521_130005 ===
+[17:26:53] Step 1: Dry run (schema + obj4)
+[17:26:54]   JSONL files: 1, schema=PASS
+[17:26:54] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:28:07]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:28:07]   Received=4, Spool_after=0, Resilience=PASS
+[17:28:07] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:28:08]   Idempotencia: PASS (MD5 identico)
+[17:28:08] Step 4: TLS (verificado en esta corrida)
+[17:28:08]   Result for Visita_21: schema=PASS tls=PASS res=PASS
+[17:28:08] 
+==================================================
+[17:28:08] === Visita_22: TOMA_PM__1PM__Captura_20260522_130005 ===
+[17:28:08] Step 1: Dry run (schema + obj4)
+[17:28:09]   JSONL files: 1, schema=PASS
+[17:28:09] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:29:21]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:29:21]   Received=4, Spool_after=0, Resilience=PASS
+[17:29:21] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:29:23]   Idempotencia: PASS (MD5 identico)
+[17:29:23] Step 4: TLS (verificado en esta corrida)
+[17:29:23]   Result for Visita_22: schema=PASS tls=PASS res=PASS
+[17:29:23] 
+==================================================
+[17:29:23] === Visita_23: TOMA_PM__1PM__Captura_20260523_130005 ===
+[17:29:23] Step 1: Dry run (schema + obj4)
+[17:29:24]   JSONL files: 1, schema=PASS
+[17:29:24] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:30:36]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:30:36]   Received=4, Spool_after=0, Resilience=PASS
+[17:30:36] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:30:37]   Idempotencia: PASS (MD5 identico)
+[17:30:37] Step 4: TLS (verificado en esta corrida)
+[17:30:37]   Result for Visita_23: schema=PASS tls=PASS res=PASS
+[17:30:37] 
+==================================================
+[17:30:37] === Visita_24: TOMA_AM__2AM__Captura_20260524_021505 ===
+[17:30:37] Step 1: Dry run (schema + obj4)
+[17:30:38]   JSONL files: 1, schema=PASS
+[17:30:38] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:31:50]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:31:50]   Received=4, Spool_after=0, Resilience=PASS
+[17:31:50] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:31:52]   Idempotencia: PASS (MD5 identico)
+[17:31:52] Step 4: TLS (verificado en esta corrida)
+[17:31:52]   Result for Visita_24: schema=PASS tls=PASS res=PASS
+[17:31:52] 
+==================================================
+[17:31:52] === Visita_25: TOMA_PM__1PM__Captura_20260525_130005 ===
+[17:31:52] Step 1: Dry run (schema + obj4)
+[17:31:53]   JSONL files: 1, schema=PASS
+[17:31:53] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:33:05]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:33:05]   Received=4, Spool_after=0, Resilience=PASS
+[17:33:05] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:33:06]   Idempotencia: PASS (MD5 identico)
+[17:33:06] Step 4: TLS (verificado en esta corrida)
+[17:33:06]   Result for Visita_25: schema=PASS tls=PASS res=PASS
+[17:33:06] 
+==================================================
+[17:33:06] === Visita_26: TOMA_PM__1PM__Captura_20260526_130201 ===
+[17:33:06] Step 1: Dry run (schema + obj4)
+[17:33:07]   JSONL files: 1, schema=PASS
+[17:33:07] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:34:20]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:34:20]   Received=4, Spool_after=0, Resilience=PASS
+[17:34:20] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:34:21]   Idempotencia: PASS (MD5 identico)
+[17:34:21] Step 4: TLS (verificado en esta corrida)
+[17:34:21]   Result for Visita_26: schema=PASS tls=PASS res=PASS
+[17:34:21] 
+==================================================
+[17:34:21] === Visita_27: TOMA_AM__2AM__Captura_20260527_021505 ===
+[17:34:21] Step 1: Dry run (schema + obj4)
+[17:34:22]   JSONL files: 1, schema=PASS
+[17:34:22] Step 2: Resiliencia (stop broker -> spool -> start -> drain -> verify)
+[17:35:34]   Output: SPOOL_FILES=1 SPOOL_LINES=4
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:35:34]   Received=4, Spool_after=0, Resilience=PASS
+[17:35:34] Step 3: Idempotencia (2 corridas aisladas + MD5)
+[17:35:36]   Idempotencia: PASS (MD5 identico)
+[17:35:36] Step 4: TLS (verificado en esta corrida)
+[17:35:36]   Result for Visita_27: schema=PASS tls=PASS res=PASS
+[17:35:36] 
+==================================================
+[17:35:36] FINAL SUMMARY MAY 21-28 PI
+[17:35:36] Visita_21: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_22: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_23: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_24: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_25: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_26: schema=PASS tls=PASS res=PASS
+[17:35:36] Visita_27: schema=PASS tls=PASS res=PASS

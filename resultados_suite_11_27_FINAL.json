@@ -1,0 +1,350 @@
+{
+  "fecha_generacion": "2026-05-29 17:58:56",
+  "periodo": "2026-05-11 a 2026-05-27",
+  "total_visitas": 17,
+  "windows": {
+    "11": {
+      "visit": "Visita_11_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260511_130005",
+      "matches": 8,
+      "eta": 24.24,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "12": {
+      "visit": "Visita_12_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260512_021505",
+      "matches": 5,
+      "eta": 38.46,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "13": {
+      "visit": "Visita_13_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260513_021505",
+      "matches": 6,
+      "eta": 18.18,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "14": {
+      "visit": "Visita_14_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260514_021505",
+      "matches": 4,
+      "eta": 23.53,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "15": {
+      "visit": "Visita_15_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260515_130005",
+      "matches": 12,
+      "eta": 27.91,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "16": {
+      "visit": "Visita_16_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260516_130005",
+      "matches": 2,
+      "eta": 33.33,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "17": {
+      "visit": "Visita_17_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260517_021505",
+      "matches": 3,
+      "eta": 27.27,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "18": {
+      "visit": "Visita_18_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260518_021505",
+      "matches": 3,
+      "eta": 25.0,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "19": {
+      "visit": "Visita_19_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260519_021505",
+      "matches": 4,
+      "eta": 16.67,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "20": {
+      "visit": "Visita_20_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260520_021505",
+      "matches": 1,
+      "eta": 8.33,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "21": {
+      "visit": "Visita_21_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260521_130005",
+      "matches": 8,
+      "eta": 26.67,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "22": {
+      "visit": "Visita_22_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260522_130005",
+      "matches": 3,
+      "eta": 15.79,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "23": {
+      "visit": "Visita_23_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260523_021505",
+      "matches": 5,
+      "eta": 20.83,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "24": {
+      "visit": "Visita_24_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260524_021505",
+      "matches": 7,
+      "eta": 41.18,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "25": {
+      "visit": "Visita_25_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260525_130005",
+      "matches": 7,
+      "eta": 58.33,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "26": {
+      "visit": "Visita_26_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260526_130201",
+      "matches": 3,
+      "eta": 13.64,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    },
+    "27": {
+      "visit": "Visita_27_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260527_021505",
+      "matches": 12,
+      "eta": 24.0,
+      "schema": true,
+      "idempotency": true,
+      "objective4": true
+    }
+  },
+  "raspberry_pi": {
+    "11": {
+      "visit": "Visita_11_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260511_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 40
+    },
+    "12": {
+      "visit": "Visita_12_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260512_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 20
+    },
+    "13": {
+      "visit": "Visita_13_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260513_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 40
+    },
+    "14": {
+      "visit": "Visita_14_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260514_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 24
+    },
+    "15": {
+      "visit": "Visita_15_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260515_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 50
+    },
+    "16": {
+      "visit": "Visita_16_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260516_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 14
+    },
+    "17": {
+      "visit": "Visita_17_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260517_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 18
+    },
+    "18": {
+      "visit": "Visita_18_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260518_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 19
+    },
+    "19": {
+      "visit": "Visita_19_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260519_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 31
+    },
+    "20": {
+      "visit": "Visita_20_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260520_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": true,
+      "received": 19
+    },
+    "21": {
+      "visit": "Visita_21_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260521_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "22": {
+      "visit": "Visita_22_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260522_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "23": {
+      "visit": "Visita_23_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260523_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "24": {
+      "visit": "Visita_24_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260524_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "25": {
+      "visit": "Visita_25_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260525_130005",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "26": {
+      "visit": "Visita_26_05_2026",
+      "session": "TOMA_PM__1PM__Captura_20260526_130201",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    },
+    "27": {
+      "visit": "Visita_27_05_2026",
+      "session": "TOMA_AM__2AM__Captura_20260527_021505",
+      "schema": true,
+      "tls": true,
+      "resilience": true,
+      "subscribe": true,
+      "idempotency": true,
+      "objective4": false,
+      "received": 4
+    }
+  },
+  "tls_global": true
+}

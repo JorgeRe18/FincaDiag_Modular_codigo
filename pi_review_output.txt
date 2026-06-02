@@ -1,0 +1,221 @@
+
+============================================================
+  Fecha actual
+  $ date
+============================================================
+Sun 31 May 16:37:44 CST 2026
+
+============================================================
+  Uptime
+  $ uptime
+============================================================
+16:37:45 up 21:04,  2 users,  load average: 0.00, 0.00, 0.00
+
+============================================================
+  Memoria
+  $ free -h
+============================================================
+total        used        free      shared  buff/cache   available
+Mem:           7.9Gi       366Mi       7.1Gi        13Mi       503Mi       7.5Gi
+Swap:          2.0Gi          0B       2.0Gi
+
+============================================================
+  Servicios activos
+  $ systemctl is-active fincadiag-gateway mosquitto
+============================================================
+active
+active
+
+============================================================
+  Directorio FincaLogs
+  $ ls -la /home/esmeralda/FincaLogs/ 2>/dev/null | tail -10
+============================================================
+-rw-r--r-- 1 root      root            5 May 31 15:10 fincadiag_scheduler.lock
+-rw-r--r-- 1 root      root         1518 May 31 16:37 fincadiag_scheduler_state.json
+-rw-r--r-- 1 root      root        31199 Apr  2 15:27 fincadiag_serial_monitor.log
+drwxr-xr-x 6 root      root         4096 May 31 06:34 normal_1_20260531_0434
+drwxr-xr-x 6 root      root         4096 May 31 09:23 normal_2_20260531_0723
+drwxr-xr-x 6 root      root         4096 May 31 12:12 normal_3_20260531_1012
+drwxr-xr-x 5 root      root         4096 May 31 16:10 normal_4_20260531_1510
+drwxr-xr-x 6 root      root         4096 May 31 01:26 normal_7_20260530_2326
+drwxr-xr-x 5 root      root         4096 May 31 03:35 orde±o_am_20260531_0215
+drwxr-xr-x 5 root      root         4096 May 31 14:20 orde±o_pm_20260531_1300
+
+============================================================
+  Capturas del 31 mayo
+  $ ls -la /home/esmeralda/FincaLogs/ | grep '20260531'
+============================================================
+drwxr-xr-x 6 root      root         4096 May 31 06:34 normal_1_20260531_0434
+drwxr-xr-x 6 root      root         4096 May 31 09:23 normal_2_20260531_0723
+drwxr-xr-x 6 root      root         4096 May 31 12:12 normal_3_20260531_1012
+drwxr-xr-x 5 root      root         4096 May 31 16:10 normal_4_20260531_1510
+drwxr-xr-x 5 root      root         4096 May 31 03:35 orde±o_am_20260531_0215
+drwxr-xr-x 5 root      root         4096 May 31 14:20 orde±o_pm_20260531_1300
+
+============================================================
+  Estado scheduler
+  $ cat /home/esmeralda/FincaLogs/fincadiag_scheduler_state.json 2>/dev/null
+============================================================
+{
+  "bloque_id": "normal_4",
+  "bloque_tipo": "normal",
+  "bloque_inicio": "2026-05-31T15:10:00",
+  "bloque_fin": "2026-05-31T17:48:00",
+  "status": "running",
+  "boot_id": "29acabf9-a1df-44ac-87a7-1f29dc40865a",
+  "last_heartbeat_at": "2026-05-31T16:37:40",
+  "active_phase_id": "pcap",
+  "fases": [
+    {
+      "id": "baseline_inicio",
+      "label": "Baseline inicial",
+      "mode": "4",
+      "kind": "baseline",
+      "planned_seconds": 0,
+      "status": "completed",
+      "attempts": 1,
+      "executed_seconds": 0,
+      "started_at": "2026-05-31T15:10:02",
+      "completed_at": "2026-05-31T15:10:06"
+    },
+    {
+      "id": "antena",
+      "label": "Antena UDP",
+      "mode": "1",
+      "kind": "capture",
+      "planned_seconds": 3600,
+      "status": "completed",
+      "attempts": 1,
+      "executed_seconds": 3600,
+      "started_at": "2026-05-31T15:10:06",
+      "completed_at": "2026-05-31T16:10:06"
+    },
+    {
+      "id": "pcap",
+      "label": "PCAP completo",
+      "mode": "3",
+      "kind": "capture",
+      "planned_seconds": 3600,
+      "status": "running",
+      "attempts": 1,
+      "executed_seconds": 1654,
+      "started_at": "2026-05-31T16:10:06",
+      "completed_at": null
+    },
+    {
+      "id": "baseline_fin",
+      "label": "Baseline final",
+      "mode": "4",
+      "kind": "baseline",
+      "planned_seconds": 0,
+      "status": "pending",
+      "attempts": 0,
+      "executed_seconds": 0,
+      "started_at": null,
+      "completed_at": null
+    }
+  ],
+  "recoveries": []
+}
+
+============================================================
+  Resultados resiliencia
+  $ cat /home/esmeralda/obj4_resilience_results.csv 2>/dev/null
+============================================================
+timestamp,scenario,session,expected_msgs,published_msgs,lost_msgs,plr_pct,mttr_s,status
+2026-05-31T05:23:09,broker,RESIL_broker_20260531_052203,40,40,0,0.00,1.20,PASS
+2026-05-31T05:24:19,network,RESIL_network_20260531_052313,40,40,0,0.00,1.21,PASS
+2026-05-31T05:24:24,kill,RESIL_kill_20260531_052423,40,40,0,0.00,1.27,PASS
+
+============================================================
+  Log resiliencia
+  $ cat /home/esmeralda/obj4_resilience.log 2>/dev/null | tail -30
+============================================================
+[2026-05-31T05:17:24]   Sesion escenificada: RESIL_kill_20260531_051724
+[2026-05-31T05:17:24]   proceso de publicacion terminado con SIGKILL a mitad de operacion
+[2026-05-31T05:17:24]   publicado antes del crash: 0 (sesion sigue en processed)
+[2026-05-31T05:17:26]   republish rc=0: published=40 spooled=0 failed=0 | MTTR=1.27s
+[2026-05-31T05:17:26]   RESULTADO kill: expected=40 published=40 PLR=0.00% MTTR=1.27s -> PASS
+[2026-05-31T05:17:29] ### Fin experimento. Servicio gateway activo: True ###
+[2026-05-31T05:22:02] ### Inicio experimento Obj4: ['broker', 'network', 'kill'] ###
+[2026-05-31T05:22:02] === Escenario BROKER (corte real de mosquitto) ===
+[2026-05-31T05:22:03]   Sesion escenificada: RESIL_broker_20260531_052203
+[2026-05-31T05:22:03]   mosquitto detenido; publicando sesion (debe agotar backoff y encolar)...
+[2026-05-31T05:23:06]   publish rc=0: published=0 spooled=40 failed=40
+- Publicacion fallida, batch enviado a spool: [Errno 111] Connection refused
+[2026-05-31T05:23:06]   spool tras fallo: 40 mensajes
+[2026-05-31T05:23:09]   drain rc=0: drained=40 failed=0 | MTTR=1.20s
+[2026-05-31T05:23:09]   RESULTADO broker: expected=40 published=40 PLR=0.00% MTTR=1.20s -> PASS
+[2026-05-31T05:23:12] === Escenario NETWORK (bloqueo iptables 8883) ===
+[2026-05-31T05:23:13]   Sesion escenificada: RESIL_network_20260531_052313
+[2026-05-31T05:23:13]   iptables DROP 8883 activo; publicando sesion...
+[2026-05-31T05:24:15]   publish rc=0: published=0 spooled=40 failed=40
+- Publicacion fallida, batch enviado a spool: [Errno 111] Connection refused
+[2026-05-31T05:24:15]   spool tras fallo: 40 mensajes
+[2026-05-31T05:24:19]   drain rc=0: drained=40 failed=0 | MTTR=1.21s
+[2026-05-31T05:24:19]   RESULTADO network: expected=40 published=40 PLR=0.00% MTTR=1.21s -> PASS
+[2026-05-31T05:24:22] === Escenario KILL (crash del proceso a mitad de publicacion) ===
+[2026-05-31T05:24:23]   Sesion escenificada: RESIL_kill_20260531_052423
+[2026-05-31T05:24:23]   proceso de publicacion terminado con SIGKILL a mitad de operacion
+[2026-05-31T05:24:23]   publicado antes del crash: 0 (sesion sigue en processed)
+[2026-05-31T05:24:24]   republish rc=0: published=40 spooled=0 failed=0 | MTTR=1.27s
+[2026-05-31T05:24:24]   RESULTADO kill: expected=40 published=40 PLR=0.00% MTTR=1.27s -> PASS
+[2026-05-31T05:24:27] ### Fin experimento. Servicio gateway activo: True ###
+
+============================================================
+  Archivos publicados
+  $ ls -la /var/lib/fincadiag/published/ 2>/dev/null
+============================================================
+total 116
+drwxr-xr-x 2 esmeralda esmeralda  4096 May 31 05:37 .
+drwxr-xr-x 5 esmeralda esmeralda  4096 May  9 19:06 ..
+-rw-r--r-- 1 esmeralda esmeralda 54079 May 29 00:43 TOMA_PM__1PM__Captura_20260511_130005.jsonl
+-rw-rw-r-- 1 esmeralda esmeralda 12672 May 29 00:43 TOMA_PM__1PM__Captura_20260518_130005.jsonl
+-rw-r--r-- 1 esmeralda esmeralda 32293 May 29 00:43 Visita_06_04_2026__TOMA_PM__1PM__Captura_20260406_125505.jsonl
+-rw-r--r-- 1 esmeralda esmeralda  1305 May 29 00:43 visits.jsonl
+
+============================================================
+  Cola de spool
+  $ ls -la /var/lib/fincadiag/spool/ 2>/dev/null
+============================================================
+total 8
+drwxr-xr-x 2 esmeralda esmeralda 4096 May 31 05:24 .
+drwxr-xr-x 5 esmeralda esmeralda 4096 May  9 19:06 ..
+
+============================================================
+  Jobs at programados
+  $ atq | sort -k2,5
+============================================================
+(vacÝo)
+
+============================================================
+  Logs gateway (·ltimas 15)
+  $ journalctl -u fincadiag-gateway --no-pager -n 15 2>/dev/null
+============================================================
+May 31 05:23:12 gateway-esmeralda systemd[1]: Stopped fincadiag-gateway.service - Gateway perimetral FincaDiag.
+May 31 05:24:19 gateway-esmeralda systemd[1]: Started fincadiag-gateway.service - Gateway perimetral FincaDiag.
+May 31 05:24:19 gateway-esmeralda python3[9579]: [watch] Iniciando modo continuo. Intervalo: 60s
+May 31 05:24:22 gateway-esmeralda systemd[1]: Stopping fincadiag-gateway.service - Gateway perimetral FincaDiag...
+May 31 05:24:22 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Deactivated successfully.
+May 31 05:24:22 gateway-esmeralda systemd[1]: Stopped fincadiag-gateway.service - Gateway perimetral FincaDiag.
+May 31 05:24:24 gateway-esmeralda systemd[1]: Started fincadiag-gateway.service - Gateway perimetral FincaDiag.
+May 31 05:24:25 gateway-esmeralda python3[9598]: [watch] Iniciando modo continuo. Intervalo: 60s
+May 31 13:35:00 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Sent signal SIGKILL to main process 9598 (python3) on client request.
+May 31 13:35:00 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Killed unit cgroup with SIGKILL on client request.
+May 31 13:35:00 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Main process exited, code=killed, status=9/KILL
+May 31 13:35:00 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Failed with result 'signal'.
+May 31 13:35:05 gateway-esmeralda systemd[1]: fincadiag-gateway.service: Scheduled restart job, restart counter is at 1.
+May 31 13:35:05 gateway-esmeralda systemd[1]: Started fincadiag-gateway.service - Gateway perimetral FincaDiag.
+May 31 13:35:05 gateway-esmeralda python3[17482]: [watch] Iniciando modo continuo. Intervalo: 60s
+
+============================================================
+  Inyecciones de fallo (live)
+  $ cat /home/esmeralda/fault_injections.csv 2>/dev/null
+============================================================
+timestamp,modo,duracion_s,t_recovery_s,estado_daemon_antes,estado_daemon_despues,estado_mosquitto_despues,observacion
+2026-05-31T02:30:00-06:00,broker,5,5.141583108,active,active,active,reinicio mosquitto
+2026-05-31T03:15:00-06:00,broker,90,90.243242032,active,active,active,reinicio mosquitto
+2026-05-31T13:15:00-06:00,network,90,90.060334408,active,active,active,iptables block+flush
+2026-05-31T13:35:00-06:00,kill,90,5.612520688,active,active,active,systemd restart
+
+=== Revisi¾n completada ===

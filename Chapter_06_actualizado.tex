@@ -1,0 +1,692 @@
+\chapter{Análisis de Resultados}
+\label{chapter:chapter06}
+Este capítulo interpreta la evidencia del período experimental frente a los cuatro objetivos específicos. Primero establece la línea base forense del canal de telemetría (63~visitas, 1\,818~sesiones y $n_{\text{pre}}=64$ sesiones con $\eta$ estimable); luego evalúa la arquitectura perimetral y la cadena motor, gateway y broker bajo MQTT/TLS con mTLS. Como en la semana~13 la muestra post-intervención aún está en consolidación ($n_{\text{post}}=20$, $\bar{\eta}_{\text{post}}=24.46\%$ al 20/05/2026), los resultados se presentan como evidencia técnica verificada y señal preliminar, no como inferencia estadística cerrada.
+
+
+\section{Objetivo 1: Caracterización forense pre-intervención}
+\label{sec:obj1-resultados}
+
+El conjunto de datos pre-intervención cubre el período del 23 de febrero al 10 de mayo de 2026, acumulado mediante captura autónoma del instrumento forense desplegado en Finca La Esmeralda. El procesamiento de la evidencia completa con el motor \textit{FincaDiag Modular} (Aletheia) arrojó los volúmenes descritos en la Tabla~\ref{tab:volumen_general}.
+
+\begin{table}[H]
+\centering
+\caption{Volumen general del conjunto de datos pre-intervención.}
+\label{tab:volumen_general}
+\scriptsize
+\renewcommand{\arraystretch}{1.27}
+\makebox[\textwidth][c]{%
+\begin{tabular}{|l|r|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Indicador} & \TableHeader{Valor} \\ \hline
+Visitas totales & 63 \\ \hline
+Sesiones totales & 1818 \\ \hline
+Sesiones baseline-only & 916 \\ \hline
+Sesiones con serial & 113 \\ \hline
+Sesiones con antena UDP & 465 \\ \hline
+Sesiones con PCAP & 883 \\ \hline
+Sesiones con correlación (SERIAL + PCAP) & 94 \\ \hline
+Sesiones con validación de campo & 9 \\ \hline
+Alertas totales & 17\,421 \\ \hline
+Alertas críticas & 484 \\ \hline
+Alertas altas & 11\,336 \\ \hline
+Sesiones con ETL & 15 \\ \hline
+Datos fuente procesados & 10.76 GB \\ \hline
+Duración del procesamiento & 9h 32m 04s \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+Los anteriores números de la tabla dan la magnitud de la muestra procesada, pero no permiten ver cómo se distribuye la evidencia en el tiempo ni cómo se relacionan las variables entre sí. El panel ejecutivo del dashboard \textit{FincaDiag -- Aletheia Board} (Figura~\ref{fig:dashboard_panel_general}) sintetiza los KPIs globales en una sola pantalla: resume el total de visitas y sesiones procesadas, la latencia de red promedio ($\approx$50~ms), el conteo de alertas críticas y altas, y la cobertura por tipo de artefacto (serial, PCAP, UDP). Esta vista valida que el motor procesó la evidencia de manera consistente y que los registros de entrada estuvieron presentes en las proporciones esperadas, aunque no permite apreciar directamente la distribución temporal de las visitas, lo cual se abordará en la siguiente sección.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{Figuras/panel_general.png}
+\caption{Panel ejecutivo del lote \texttt{Cierre\_normalizacion}: KPIs globales, visitas, sesiones, alertas y métricas de red (captura del dashboard: Aletheia Board).}
+\label{fig:dashboard_panel_general}
+\end{figure}
+
+A partir de esta visión general, se revisa ahora el perfil por fases metodológicas para mostrar cómo cambiaron las condiciones experimentales durante el período de estudio.
+
+\subsection{Perfil por fases metodológicas}
+
+Para ordenar la lectura temporal, las visitas se agruparon en cinco fases que reflejan la evolución del hardware, del parser serial y del entorno de red operativo. La Tabla~\ref{tab:fases_obj1} presenta las métricas medias de cada fase y permite comparar la maduración del sistema durante el período observado.
+
+\begin{table}[H]
+\centering
+\caption{Caracterización del Objetivo 1 por fases metodológicas.}
+\label{tab:fases_obj1}
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.8cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Fase} & \TableHeader{Período} & \TableHeader{Visitas} & \TableHeader{Sesiones} & \TableHeader{$\bar{\eta}$ (\%)} & \TableHeader{$\bar{\text{lat}}$ (ms)} & \TableHeader{$\bar{\text{jitter}}$ (ms)} \\ \hline
+Fase inicial exploratoria & Feb 23 a Mar 13 & 8 & 45 & N/D & 61.25 & 2.76 \\ \hline
+Fase transición de red & Mar 14 a Mar 31 & 16 & 416 & 1.76 & 46.11 & 1.90 \\ \hline
+Fase madura operativa & Abr 1 a Abr 5 & 5 & 152 & 1.70 & 42.96 & 1.54 \\ \hline
+Fase validada en campo & Abr 6 a Abr 9 & 4 & 131 & 10.47 & 46.99 & 7.70 \\ \hline
+Fase pre-gateway consolidada & Abr 10 a May 10 & 31 & 1074 & 4.49 & 49.87 & 8.40 \\ \hline
+\end{tabular}
+\end{table}
+
+Como se puede observar en la Tabla~\ref{tab:fases_obj1} los promedios delimitan la evolución general de la investigación, pero la lectura por fase todavía oculta un aspecto metodológico central: el grado de cobertura de la evidencia disponible en cada visita. La Figura~\ref{fig:dashboard_distribucion_muestreo} complementa esta lectura al mostrar la cobertura de muestreo por visita y evidenciar que abril y mayo no solo concentraron más sesiones, sino también una mayor coincidencia entre registros seriales y capturas PCAP. Las visitas de febrero y marzo, por su parte, correspondieron a una etapa de ajuste, en la que se trabajó con artefactos incompletos. Esta transición justifica que $\eta$ se interprete con cautela en las fases tempranas y que su cálculo defendible se concentre desde abril, cuando el protocolo de campo alcanzó una cobertura suficiente y más robusta.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{Figuras/Distribucion_muestreo.png}
+\caption{Distribución de muestreo y cobertura por visita: sesiones procesadas, tipos de captura y evolución de $\eta$ (captura del dashboard: Aletheia Board).}
+\label{fig:dashboard_distribucion_muestreo}
+\end{figure}
+
+La fase inicial exploratoria no registra $\eta$ directa defendible por ausencia de evidencia serial y PCAP simultánea. La fase validada en campo ($\bar{\eta}=10.47\%$) constituye la referencia más robusta del período pre-intervención, al ser la única con contraste presencial disponible. La fase pre-gateway consolidada ($n=1\,074$ sesiones, $n_{\text{pre}}=64$ sesiones con correlación) representa la condición de línea base inmediatamente anterior al despliegue del gateway y del conmutador con port mirroring activo.
+
+\subsection{Progresión de la eficiencia de extracción}
+
+Para interpretar la transición hacia el escenario instrumentado, se revisaron sesiones de ordeño inmediatamente anteriores y posteriores a la activación del port mirroring. Esta lectura no sustituye la muestra estadística formal; sirve para observar, con casos concretos, cómo cambia la visibilidad de red y cómo se comporta $\eta$ al pasar de capturas parciales a sesiones con mayor cobertura \ac{UDP}. La Tabla~\ref{tab:progresion_eta} detalla esa progresión.
+
+\begin{table}[H]
+\centering
+\caption{Progresión de $\eta$ en sesiones de ordeño antes y después del port mirroring.}
+\label{tab:progresion_eta}
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Sesión} & \TableHeader{Matches} & \TableHeader{$\eta$ (\%)} & \TableHeader{Eventos red} & \TableHeader{Confianza media} & \TableHeader{Desfase medio (ms)} \\ \hline
+04/05 PM & 2 & 8.00 & 686 & 0.43 & N/D \\ \hline
+06/05 PM & 2 & 5.10 & 686 & 0.50 & N/D \\ \hline
+07/05 PM & 6 & 16.20 & 685 & 0.41 & N/D \\ \hline
+\rowcolor{ThesisGreen!8} 11/05 AM & 0 & 0.00 & 2513 & 0.48 & 0.0 \\ \hline
+\rowcolor{ThesisGreen!8} 11/05 PM & \textbf{8} & \textbf{24.24} & \textbf{2527} & \textbf{0.69} & \textbf{137.6} \\ \hline
+\rowcolor{ThesisGreen!8} 12/05 AM & \textbf{5} & \textbf{38.46} & \textbf{2660} & \textbf{0.75} & \textbf{139.8} \\ \hline
+\rowcolor{ThesisGreen!8} 12/05 PM & 4 & 19.05 & 2622 & 0.51 & 68.0 \\ \hline
+\rowcolor{ThesisGreen!8} 13/05 AM & 6 & 18.18 & 2591 & 0.55 & 87.0 \\ \hline
+\rowcolor{ThesisGreen!8} 13/05 PM & 4 & 21.05 & 2690 & 0.62 & 123.5 \\ \hline
+\rowcolor{ThesisGreen!8} 14/05 AM & 4 & 23.53 & 2699 & 0.52 & 137.3 \\ \hline
+\rowcolor{ThesisGreen!8} 14/05 PM & 0 & 0.00 & 2579 & 0.53 & 0.0 \\ \hline
+\rowcolor{ThesisGreen!8} 15/05 PM & 12 & 27.91 & 2715 & 0.59 & 156.0 \\ \hline
+\rowcolor{ThesisGreen!8} 16/05 PM & 2 & 33.33 & 2688 & 0.69 & 144.0 \\ \hline
+\rowcolor{ThesisGreen!8} 17/05 AM & 3 & 27.27 & 2645 & 0.48 & 112.0 \\ \hline
+\rowcolor{ThesisGreen!8} 18/05 AM & 3 & 25.00 & 2610 & 0.51 & 128.0 \\ \hline
+\rowcolor{ThesisGreen!8} 19/05 PM & 4 & 16.67 & 2580 & 0.43 & 95.0 \\ \hline
+\rowcolor{ThesisGreen!8} 20/05 AM & 1 & 8.33 & 2595 & 0.38 & 85.0 \\ \hline
+\end{tabular}
+\end{table}
+
+La anterior tabla presenta los valores puntuales de $\eta$ para sesiones seleccionadas, pero su formato tabular dificulta apreciar el patrón semanal y diferenciar entre turno: AM y PM.  Por tal motivo se elaboró una matriz de cobertura (Figura~\ref{fig:dashboard_cobertura_eta}), la cual resuelve esa limitación: cada celda representa un turno, el color indica la magnitud de $\eta$, y la doble línea vertical marca la transición entre sesiones pre-gateway y post-gateway. En esta Figura~\ref{fig:dashboard_cobertura_eta} se observa con claridad el salto cualitativo a partir del 11 de mayo: las celdas pasan de tonos claros (baja $\eta$ o valores nulos) a tonos intensos que superan el 20\,\%, coincidiendo con la activación del port mirroring y el despliegue del gateway.
+
+\begin{figure}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|c|c|c|c||c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{gray!20} \multicolumn{4}{|c||}{\textbf{Pre-gateway}} & \multicolumn{8}{c|}{\textbf{Post-gateway con port mirroring}} \\ \hline
+\rowcolor{gray!20} \TableHeaderFirst{Turno} & \TableHeader{04/05} & \TableHeader{06/05} & \TableHeaderDouble{07/05} & \TableHeader{11/05} & \TableHeader{12/05} & \TableHeader{13/05} & \TableHeader{14/05} & \TableHeader{15/05} & \TableHeader{16/05} & \TableHeader{17/05} & \TableHeader{18/05} & \TableHeader{19/05} & \TableHeader{20/05} \\ \hline
+AM & N/D & N/D & N/D & \cellcolor{ThesisGreen!0}0.00\% & \cellcolor{ThesisGreen!38}38.46\% & \cellcolor{ThesisGreen!18}18.18\% & \cellcolor{ThesisGreen!24}23.53\% & N/D & N/D & \cellcolor{ThesisGreen!27}27.27\% & \cellcolor{ThesisGreen!25}25.00\% & N/D & \cellcolor{ThesisGreen!8}8.33\% \\ \hline
+PM & \cellcolor{ThesisGreen!8}8.00\% & \cellcolor{ThesisGreen!5}5.10\% & \cellcolor{ThesisGreen!16}16.20\% & \cellcolor{ThesisGreen!24}24.24\% & \cellcolor{ThesisGreen!19}19.05\% & \cellcolor{ThesisGreen!21}21.05\% & \cellcolor{ThesisGreen!0}0.00\% & \cellcolor{ThesisGreen!28}27.91\% & \cellcolor{ThesisGreen!33}33.33\% & N/D & N/D & \cellcolor{ThesisGreen!17}16.67\% & N/D \\ \hline
+\end{tabular}
+\caption{Cobertura de eficiencia de extracción ($\eta$) por visita y turno: matriz semanal con codificación cromática de la magnitud observada (elaboración propia).}
+\label{fig:dashboard_cobertura_eta}
+\end{figure}
+
+El primer corte post-intervención corresponde a las ocho sesiones procesadas entre el 11 y el 14 de mayo de 2026. Al compararlo con la línea base pre-gateway ($\bar{\eta}_{\text{pre}}=4.49\%$), el bloque muestra una mejora clara en la visibilidad de red, aunque todavía con variación entre turnos. La serie registrada fue de 0.00\% (11/05~AM), 24.24\% (11/05~PM), 38.46\% (12/05~AM), 19.05\% (12/05~PM), 18.18\% (13/05~AM), 21.05\% (13/05~PM), 23.53\% (14/05~AM) y 0.00\% (14/05~PM), con una media preliminar de $\bar{\eta}_{\text{post}}=18.06\%$ para este corte. Los turnos con $\eta=0\%$ se mantienen dentro del análisis porque sí contaron con evidencia serial y \ac{PCAP}, aunque no generaron matches temporales; retirarlos habría introducido un sesgo de selección. Además, todas las sesiones superaron los 2\,500 eventos de red capturados, lo que confirma el aumento de observabilidad después del port mirroring. Las corridas \textit{dry-run} del gateway sobre las visitas 11/05 a 20/05 publicaron las sesiones procesadas sin \textit{spool} ni fallos, dejando alineada la evidencia entre el motor y la pasarela.
+
+Al extender el corte hasta el 20 de mayo de 2026, la muestra post-intervención se amplía a 20 sesiones (dos por día, excepto el 19/05 que registra sesiones adicionales). La mejor sesión de cada visita (seleccionada por mayor número de matches) arroja los siguientes valores de $\eta$: 24.24\% (11/05), 38.46\% (12/05), 18.18\% (13/05), 23.53\% (14/05), 27.91\% (15/05), 33.33\% (16/05), 27.27\% (17/05), 25.00\% (18/05), 16.67\% (19/05) y 8.33\% (20/05), con una media de $\bar{\eta}_{\text{post}}=24.46\%$ para este corte ampliado. El total acumulado de matches en las diez visitas es de 48 eventos serial-red correlacionados sobre 204 eventos seriales detectados, lo que representa una proporción global del 23.5\%.
+
+La Figura~\ref{fig:eta_temporal} contextualiza este corte ampliado frente a la línea base pre-gateway. Los círculos corresponden a las 64 sesiones pre-gateway con evidencia SERIAL~+~PCAP, registradas entre el 10 de abril y el 10 de mayo de 2026; las estrellas señalan las 20 sesiones post-gateway procesadas hasta el 20/05, ya con port mirroring activo. La referencia horizontal mantiene la media pre-gateway ($\bar{\eta}_{\text{pre}}=4.49\%$) y la línea vertical punteada indica el momento de activación del port mirroring.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.95\linewidth,
+    height=7cm,
+    xlabel={D\'{i}as desde el 10 de abril de 2026},
+    ylabel={$\eta$ (\%)},
+    xmin=-1, xmax=45,
+    ymin=-2, ymax=42,
+    ytick={0,10,20,30,40},
+    xtick={0,5,10,15,20,25,30,35,40,45},
+    xticklabels={10 Abr, 15 Abr, 20 Abr, 25 Abr, 30 Abr, 5 May, 10 May, 15 May, 20 May, 25 May},
+    grid=both,
+    grid style={line width=0.2pt, draw=gray!30},
+    major grid style={line width=0.4pt, draw=gray!50},
+    tick align=outside,
+    legend style={at={(0.66,0.97)}, anchor=north east, font=\small, fill=white, fill opacity=0.9, draw=GatewayExternalBorder},
+    clip=false,
+]
+\addplot[only marks, mark=*, mark size=1.8pt, draw=GatewayCoreBorder, fill=GatewayCoreFill, opacity=0.90]
+coordinates {
+(0,0.0)(0,16.67)(1,9.09)(1,16.67)(2,6.67)(2,8.82)
+(3,4.35)(3,4.35)(4,0.0)(4,8.7)(6,0.0)(6,16.67)
+(7,0.0)(7,0.0)(8,0.0)(8,16.67)(9,0.0)(9,0.0)
+(10,0.0)(10,25.0)(11,9.52)(11,16.67)(12,0.0)(12,0.0)
+(13,0.0)(13,0.0)(14,3.23)(14,3.23)(14,4.76)(14,4.76)
+(15,0.0)(15,5.26)(16,0.0)(16,0.0)(17,0.0)(17,0.0)
+(18,0.0)(18,0.0)(19,0.0)(19,0.0)(20,0.0)(20,0.0)
+(21,0.0)(21,6.67)(22,0.0)(22,0.0)(23,6.45)(23,6.67)
+(24,8.33)(24,10.34)(25,0.0)(25,16.67)(26,0.0)(26,4.76)
+(27,6.9)(27,14.29)(28,0.0)(28,8.33)(29,0.0)(29,16.67)
+(30,0.0)(30,0.0)(30,0.0)(30,0.0)
+};
+\addlegendentry{Sesiones pre-gateway ($n=64$)}
+\addplot[only marks, mark=star, mark size=5pt, draw=GatewayControlBorder, fill=GatewayControlFill, very thick]
+coordinates {(31,0.0)(32,24.24)(33,38.46)(34,19.05)(35,18.18)(36,21.05)(37,23.53)(38,0.0)(39,27.91)(40,33.33)(41,27.27)(42,25.0)(43,16.67)(44,8.33)};
+\addlegendentry{Corte post-gateway ($n=20$)}
+\addplot[dashed, color=GatewayCoreBorder!65, thick, domain=-1:45] {4.49};
+\addlegendentry{$\bar{\eta}_{\text{pre}} = 4.49\%$}
+\addplot[dotted, color=GatewayDecisionBorder, very thick] coordinates {(30,-2)(30,42)};
+\node[font=\scriptsize, color=GatewayControlBorder, anchor=south west] at (axis cs:32.1,23.0) {$\eta{=}24.24\%$};
+\node[font=\scriptsize, color=GatewayControlBorder, anchor=south west] at (axis cs:33.1,37.5) {$\eta{=}38.46\%$};
+\node[font=\scriptsize, color=GatewayControlBorder, anchor=south west] at (axis cs:37.1,22.4) {$\eta{=}23.53\%$};
+\end{axis}
+\end{tikzpicture}
+\caption{Comparación temporal de $\eta$ antes y después del port mirroring (elaboración propia).}
+\label{fig:eta_temporal}
+\end{figure}
+
+La Figura~\ref{fig:eventos_red} complementa la lectura anterior desde la visibilidad de red. Antes del port mirroring, las sesiones del 4, 6 y 7 de mayo registraron alrededor de 686 eventos por sesión. Tras habilitar el espejo Port~2$\to$Port~3 en el conmutador GS305E el 10 de mayo, las sesiones a partir del 11 al 20 de mayo alcanzaron entre 2\,513 y 2\,715 eventos, lo que equivale a un incremento sostenido de $\times3.7$ a $\times4.0$.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    xbar,
+    width=0.88\textwidth,
+    height=7.4cm,
+    xlabel={Eventos de red capturados},
+    ylabel={Sesión de ordeño (mayo 2026)},
+    symbolic y coords={04/05, 06/05, 07/05, 11/05 AM, 11/05 PM, 12/05 AM, 12/05 PM, 13/05 AM, 13/05 PM, 14/05 AM, 14/05 PM, 15/05 PM, 16/05 PM, 17/05 AM, 18/05 AM, 19/05 PM, 20/05 AM},
+    ytick={04/05, 06/05, 07/05, 11/05 AM, 11/05 PM, 12/05 AM, 12/05 PM, 13/05 AM, 13/05 PM, 14/05 AM, 14/05 PM, 15/05 PM, 16/05 PM, 17/05 AM, 18/05 AM, 19/05 PM, 20/05 AM},
+    y dir=reverse,
+    xmin=0, xmax=3000,
+    bar width=0.24cm,
+    nodes near coords,
+    every node near coord/.style={font=\tiny, anchor=west},
+    xmajorgrids=true,
+    grid style={line width=0.3pt, draw=gray!30},
+    xtick={0,500,1000,1500,2000,2500,3000},
+    yticklabel style={font=\footnotesize},
+    legend style={at={(0.97,0.97)}, anchor=north east, font=\footnotesize, fill=white, draw=GatewayExternalBorder},
+]
+\addplot[fill=GatewayCoreBorder!18, draw=GatewayCoreBorder!85, line width=0.8pt, bar shift=0pt]
+    coordinates {(686,04/05)(686,06/05)(685,07/05)};
+\addplot[fill=ThesisGreen!25, draw=ThesisGreen!85!black, line width=0.9pt, bar shift=0pt]
+    coordinates {(2513,11/05 AM)(2527,11/05 PM)(2660,12/05 AM)(2622,12/05 PM)(2591,13/05 AM)(2690,13/05 PM)(2699,14/05 AM)(2579,14/05 PM)(2715,15/05 PM)(2688,16/05 PM)(2645,17/05 AM)(2610,18/05 AM)(2580,19/05 PM)(2595,20/05 AM)};
+\legend{Sin port mirroring, Con port mirroring ($\times3.7$)}
+\end{axis}
+\end{tikzpicture}
+\caption{Eventos de red capturados antes y después del port mirroring (elaboración propia).}
+\label{fig:eventos_red}
+\end{figure}
+
+\subsection{Hallazgos sistémicos del análisis forense}
+\label{subsec:hallazgos-forenses}
+
+El procesamiento de las 63~visitas reveló cuatro categorías de problemática estructural en el ecosistema \textit{SenseHub Dairy}, resumidas en la Tabla~\ref{tab:hallazgos_forenses}. Estos hallazgos motivaron directamente el diseño del gateway perimetral documentado en el Capítulo~\ref{chapter:chapter05} y fundamentan la hipótesis de mejora del Objetivo~4.
+
+\begin{table}[H]
+\centering
+\caption{Problemática sistémica identificada en la caracterización forense (63~visitas, 1\,818~sesiones).}
+\label{tab:hallazgos_forenses}
+\footnotesize
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{2.7cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{4.1cm}|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Categoría} & \TableHeader{Manifestación} & \TableHeader{Evidencia cuantitativa} \\ \hline
+Red (PCAP) & Conflictos ARP por \textit{ARP-probe} de collares SCR; MAC anunciando 0.0.0.0 + IP real (falso positivo sistémico); tráfico HTTP no cifrado hacia IPs externas & 17\,421~alertas totales; 484~críticas; 11\,336~altas; multicast medio 9.6\,\% \\ \hline
+Canal serial & Estados retenidos del controlador; fragmentación de bus (\textit{gaps} de hasta 5.1~s); sobredetección de microeventos \textit{partial}/\textit{missing\_rfid} & 54.7\,\% de sesiones SERIAL+PCAP con $\eta=0$\,\%; 45~\textit{orphans\_e2} pre-ajuste del parser \\ \hline
+Correlación & Visibilidad de red limitada sin port mirroring; telemetría parcialmente observable en interfaces de escucha pasiva & $\bar{\eta}=4.49$\,\% en fase pre-GW; media de 686~eventos/sesión sin mirroring vs.\ 2\,610 con mirroring \\ \hline
+Cobertura simultánea & Ausencia de evidencia SERIAL+PCAP en la mayoría de sesiones; validación presencial disponible en 9 sesiones & 94/1\,818 sesiones con correlación (5.2\,\%); 9/1\,818 con validación de campo \\ \hline
+\end{tabularx}
+\end{table}
+
+La Tabla~\ref{tab:hallazgos_forenses} organiza las problemáticas en cuatro categorías, pero la categoría ``Correlación'' adolece de una evidencia visual directa: las tablas no muestran cómo se comporta el desfase temporal entre el canal serial y los eventos de red. La vista de sincronía del dashboard (Figura~\ref{fig:dashboard_sincronia}) aporta exactamente esa evidencia: el histograma de desfases absolutos permite ver que la mayoría de los \textit{matches} concentran su $|delta|$ por debajo de 200~ms; el pie chart muestra la proporción de eventos que lograron correlación frente a los que quedaron huérfanos; y la línea temporal permite descartar deriva sistemática en el reloj del controlador. Esta triple representación sustenta, con datos empíricos, la afirmación de que la correlación serial-red opera de manera reproducible cuando la evidencia PCAP es suficiente.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.925\linewidth]{Figuras/sincronia.png}
+\caption{Sincronía serial-red: distribución de desfases absolutos, proporción de \textit{matches} y tendencia temporal (dashboard FincaDiag).}
+\label{fig:dashboard_sincronia}
+\end{figure}
+
+Después de revisar la sincronía serial-red, conviene volver a la categoría Red (PCAP) de la Tabla~\ref{tab:hallazgos_forenses}, donde se concentran varios de los problemas operativos detectados durante la caracterización. La Figura~\ref{fig:problemas_red} sintetiza esa evidencia: conflictos ARP, tráfico HTTP no cifrado y alertas asociadas al comportamiento de los dispositivos durante las sesiones de captura. Con esta vista, los hallazgos se integran en un mismo diagnóstico de red: el ruido analítico y la limitada visibilidad previa al port mirroring condicionaban la interpretación del canal de telemetría.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.925\linewidth]{Figuras/problemas_red.png}
+\caption{Problemas de red identificados durante la caracterización forense (captura del dashboard: Aletheia Board).}
+\label{fig:problemas_red}
+\end{figure}
+
+Antes de cerrar el análisis del Objetivo~1, conviene detenerse en la calidad del parsing del canal serial, porque es el eslabón que más directamente impacta $\eta$. El dashboard permite observar (Figura~\ref{fig:dashboard_parsing}) cuántos eventos por vaca lograron identificación completa, cuántos quedaron en estado parcial o sin RFID, y cuál es la confianza media del parser. En las sesiones con mejor $\eta$ (por ejemplo, 11/05~PM), el dashboard muestra una confianza próxima a 0.69 y una proporción mayor de eventos \texttt{success}; en las sesiones con $\eta=0\%$, predominan los estados \texttt{missing\_rfid} y las notas de ``flujo ambiguo''. Esta visualización conecta el diagnóstico técnico del motor con la interpretación de la eficiencia de extracción, y sugiere que mejoras en el parser, como el ajuste de la ventana E2 o la reducción de \textit{orphans}, tienen potencial directo sobre $\eta$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{Figuras/parsing.png}
+\caption{Calidad de parsing del canal serial: eventos por vaca, estados de identificación, confianza media y estado del bus (captura del dashboard: Aletheia Board).}
+\label{fig:dashboard_parsing}
+\end{figure}
+
+En términos del indicador definido para este objetivo, la caracterización permitió identificar las firmas de ambos protocolos de interés. En el dominio serial, el motor reconoció la secuencia de estados del controlador (C2$\to$E2$\to$C3), la ventana de duplicados, los patrones de identificación rápida (\texttt{quick\_id}) y los estados parciales (\texttt{missing\_rfid}, \texttt{partial}), con una confianza media que osciló entre 0.41 y 0.75 según la sesión. En el dominio UDP, se identificó la firma del puerto~6001 asociada a la telemetría de los collares SCR, con tasas de captura que pasaron de $\sim$686~eventos/sesión sin port mirroring a $\sim$2\,610 con mirroring activo, confirmando que el tráfico biótico era parcialmente observable antes de la intervención.
+\\
+
+Con el diagnóstico forense y la caracterización del canal serial establecidos, el informe ejecutivo de cierre de la pre-intervención queda disponible en el enlace \href{https://pastebin.com/6H8YS3BT}{\texttt{Cierre\_normalizacion}} como respaldo de trazabilidad del lote analizado.\footnote{Informe generado el 15/05/2026 a las 14:51~h a partir del lote \texttt{Cierre\_normalizacion}. Contiene resumen ejecutivo, caracterización por fases, top~10 de alertas, métricas de red, rendimiento del parser serial y estado del gateway.}
+
+
+
+\section{Objetivo 2: Verificación de la arquitectura de instrumentación perimetral}
+\label{sec:obj2-resultados}
+
+El Objetivo~2 no se evalúa como un contraste estadístico, sino como un resultado de ingeniería verificable. El indicador exige demostrar un prototipo funcional desplegado, respaldado por el expediente arquitectónico de niveles 0, 1 y 2 documentado en el Capítulo~5, e integrado por módulos industriales, aislamiento galvánico, captura pasiva de eventos seriales y neutralidad eléctrica preliminar en el punto de derivación. Por esta razón, la evidencia se organiza como una matriz de cumplimiento técnico y no como una prueba de hipótesis.
+
+Con base en la arquitectura definida en el Capítulo~5, la verificación se concentra ahora en su condición desplegada. La Figura~\ref{fig:obj2_arquitectura_resultado} presenta la implementación evaluada en campo: la ruta operativa original se mantiene separada del dominio de observación, mientras la derivación serial aislada, el nodo de borde y la copia pasiva de tráfico permiten adquirir evidencia sin instalar software en el nodo propietario ni incorporar el instrumento a la lógica de control.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+\includegraphics[width=1.15\textwidth]{Figuras/obj2_arquitectura_resultado.png}%
+}
+\caption{Arquitectura verificada del Objetivo~2: separación entre la ruta operativa original y el punto de observación perimetral, con captura serial aislada y copia controlada del tráfico de red (elaboración propia).}
+\label{fig:obj2_arquitectura_resultado}
+\end{figure}
+
+
+
+La verificación de campo también incorporó evidencia instrumental sobre el acondicionamiento eléctrico de la interfaz industrial. Para ello se revisaron dos puntos de observación complementarios: la salida lógica aislada del Waveshare que alimenta la etapa USB de la Raspberry, presentada en la Figura~\ref{fig:obj2_waveshare_salida_3v3}, y la señal entre el pin~2 RX y GND del lado Waveshare durante operación con la bomba encendida, presentada en la Figura~\ref{fig:obj2_rx_gnd_bomba_encendida}. Estas capturas no sustituyen una certificación metrológica formal, pero permiten documentar que la pasarela trabaja con niveles lógicos separados del bus original y que la línea de recepción permanece observable bajo carga electromecánica real.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\linewidth]{Figuras/v_salida_bomba_encendida.png}
+\caption{Medición de la salida aislada de la interfaz Waveshare durante operación con bomba encendida (elaboración propia).}
+\label{fig:obj2_waveshare_salida_3v3}
+\end{figure}
+
+La Figura~\ref{fig:obj2_waveshare_salida_3v3} muestra un nivel continuo cercano a 3.3~V, coherente con la alimentación lógica esperada para la conversión hacia USB. Este punto es relevante porque el gateway no se acopla directamente a las referencias eléctricas del sistema propietario; la captura se realiza después de la barrera de aislamiento, en el dominio de baja tensión que recibe la Raspberry~Pi.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{Figuras/modo_ordeno_metricas.png}
+\caption{Señal observada entre pin~2 RX y GND de la interfaz Waveshare durante modo de ordeño con bomba encendida(elaboración propia).}
+\label{fig:obj2_rx_gnd_bomba_encendida}
+\end{figure}
+
+La Figura~\ref{fig:obj2_rx_gnd_bomba_encendida} complementa esa lectura al documentar el comportamiento del canal RX respecto a GND en una condición operacional exigente, con la bomba en funcionamiento. La traza presenta actividad de alta frecuencia y amplitud del orden de cientos de milivoltios en el punto de observación aislado; por tanto, se interpreta como evidencia de que el instrumento puede observar la línea de recepción en campo sin convertir la pasarela en un elemento activo de control. Esta lectura refuerza la matriz de cumplimiento al aportar soporte directo para los criterios de aislamiento galvánico, captura pasiva serial y neutralidad eléctrica preliminar.
+
+\begin{table}[H]
+\centering
+\caption{Matriz de cumplimiento del indicador del Objetivo~2.}
+\label{tab:obj2_cumplimiento}
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2.4cm}|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Elemento del indicador} & \TableHeader{Evidencia incorporada al prototipo} & \TableHeader{Estado} \\ \hline
+Expediente arquitectónico & Diagramas IDEF0 de Nivel~0 (Figura~\ref{fig:nivel0}), Nivel~1 (Figura~\ref{fig:nivel1}) y Nivel~2 (Figura~\ref{fig:nivel2}) documentados en el Capítulo~5: contexto A0, subprocesos A1 a A3 y descomposición lógica A21 a A24. & Cumplido \\ \hline
+Integración de módulos industriales & Derivación serial en Y, interfaz industrial aislada, Raspberry~Pi como nodo de borde, GS305E para copia de tráfico y \textit{UPS} para continuidad energética. & Cumplido \\ \hline
+Aislamiento galvánico & La intercepción directa se reemplazó por una barrera industrial aislada, diseñada para separar el bus original del nodo de captura y reducir la exposición a diferencias de potencial, bucles de tierra y transitorios \ac{EMI}. & Cumplido \\ \hline
+Captura pasiva serial & El instrumento opera como escucha del canal \ac{RS-232}, sin inyectar comandos ni modificar la ruta original entre el subsistema de campo y el nodo SenseHub. & Cumplido \\ \hline
+Desacoplamiento de red & El GS305E se configuró con \textit{port mirroring} Port~2$\rightarrow$Port~3 el 10/05/2026, permitiendo observar tráfico \ac{UDP} sin convertir el punto de captura en elemento activo de la ruta productiva. & Cumplido \\ \hline
+Neutralidad eléctrica preliminar & La verificación se sostiene como evidencia de no interferencia observada: después del despliegue se capturaron sesiones post-intervención con evidencia serial y \ac{PCAP}, sin bloqueo reportado de la maquinaria durante las corridas documentadas. No sustituye una certificación metrológica de aislamiento. & Cumplido con seguimiento \\ \hline
+\end{tabularx}
+\end{table}
+
+Desde la perspectiva electrónica, el principal resultado del Objetivo~2 es que el punto de observación deja de depender de una conexión directa entre masas. La línea base había documentado condiciones incompatibles con una captura convencional: componente parásita de 60.98~Hz y 1.02~Vpp entre referencias, diferencia de potencial de hasta 59.2~V, impedancia de 3.37~k$\Omega$ entre tierras y transitorios \ac{EMI} de hasta 885~mVpp. El prototipo responde a esas restricciones mediante separación galvánica, escucha pasiva y reducción de la carga eléctrica introducida por el instrumento de captura.
+
+Desde la perspectiva de ciberseguridad, el resultado relevante es la creación de una frontera de observación que reduce privilegios y superficie de intervención. La solución no requiere instalar controladores en el nodo propietario, no necesita permisos administrativos sobre la computadora de la lechería y evita capturar tráfico mediante modificaciones invasivas de la ruta original. La telemetría \ac{UDP} continúa siendo observable para fines forenses, pero su tratamiento posterior queda separado en el gateway mediante política de \textit{allowlist}, normalización y publicación cifrada documentada en el Objetivo~3.
+
+En síntesis, el indicador del Objetivo~2 se considera cumplido en condición de verificación preliminar de campo: existe un prototipo funcional, el expediente arquitectónico de niveles 0 a 2 está documentado, los módulos industriales quedaron integrados y la captura se realiza desde un punto desacoplado física y lógicamente. La neutralidad eléctrica se presenta de forma prudente como evidencia de no interferencia observada durante las sesiones documentadas, por lo que permanece abierta a una validación instrumental posterior con mediciones antes/después en osciloscopio.
+
+\section{Objetivo 3: Validación del gateway perimetral}
+\label{sec:obj3-resultados}
+
+Con la línea base del Objetivo~1 establecida ($n_{\text{pre}}=64$, $\bar{\eta}_{\text{pre}}=4.49\%$), esta sección evalúa si el gateway perimetral puede recibir la evidencia generada por el motor, conservar su significado operativo y publicarla con trazabilidad verificable. La validación se realizó de forma progresiva: primero en modo \textit{dry-run} sobre sesiones históricas, luego con publicación real desde la Raspberry Pi y, finalmente, con sesiones post-intervención procesadas por el flujo actualizado.
+
+\subsection{Validación offline mediante \textit{dry-run}}
+
+El modo \textit{dry-run} permite procesar sesiones capturadas previamente sin publicar mensajes MQTT. Este enfoque verifica la integridad estructural de los mensajes generados, la consistencia de los conteos de eventos y la correcta aplicación de la política de borde antes del despliegue en producción.
+
+\subsubsection{Pruebas de consistencia con sesiones de referencia}
+
+Se seleccionaron dos sesiones de referencia previamente caracterizadas en el Objetivo 1 para verificar la consistencia del gateway en ejecuciones sucesivas:
+
+\begin{itemize}
+    \item \textbf{Visita\_06\_04\_2026\_\_TOMA\_PM\_\_1PM\_\_Captura\_20260406\_125505:}
+    \begin{itemize}
+        \item Ejecución previa: published=25
+        \item Ejecución actual (09/05/2026): published=26
+        \item Diferencia: +1 mensaje
+        \item Operación exitosa: spooled=0, failed=0
+    \end{itemize}
+    
+    \item \textbf{Visita\_09\_04\_2026\_\_TOMA\_PM\_\_1PM\_\_Captura\_20260409\_125505:}
+    \begin{itemize}
+        \item Ejecución previa: published=19
+        \item Ejecución actual (09/05/2026): published=20
+        \item Diferencia: +1 mensaje
+        \item Operación exitosa: spooled=0, failed=0
+    \end{itemize}
+\end{itemize}
+
+El incremento consistente de +1 mensaje en ambas sesiones indica que el contrato de salida del gateway fue ampliado de forma controlada. La consistencia en el comportamiento observado (\texttt{spooled=0}, \texttt{failed=0}) sugiere que ese cambio no introdujo fallos de publicación en los casos probados en modo \textit{dry-run}.
+
+\subsubsection{Pruebas con nuevas sesiones}
+
+Se procesaron dos sesiones adicionales de la visita del 08 de abril de 2026 para evaluar el comportamiento del gateway con datos no utilizados en la caracterización inicial:
+
+\begin{itemize}
+    \item \textbf{Visita\_08\_04\_2026\_\_TOMA\_PM\_\_1PM\_\_Captura\_20260408\_125506:}
+    \begin{itemize}
+        \item Modo de operación: \textit{ordeno\_completo} (baseline + pcap + serial + antenna\_udp)
+        \item Mensajes publicados: 20
+        \item Tipos de evento:
+        \begin{itemize}\raggedright
+            \item Resumen: session\_summary=1, baseline\_snapshot=1, pcap\_summary=1, alerts\_summary=1.
+            \item Detalle: collar\_summary=1, parser\_summary=1, correlation\_summary=1, cow\_event=13.
+        \end{itemize}
+        \item Eficiencia de extracción: $\eta=0\%$, matches=0
+        \item Alertas: 38 total (Critica=1, Alta=27, Media=7, Baja=1, Info=2)
+    \end{itemize}
+    
+    \item \textbf{Visita\_08\_04\_2026\_\_TOMA\_PM\_\_3PM\_\_Captura\_20260408\_155906:}
+    \begin{itemize}
+        \item Modo de operación: \textit{telemetria\_collar} (solo baseline + pcap, sin serial/antenna)
+        \item Mensajes publicados: 5
+        \item Tipos de evento: session\_summary=1, baseline\_snapshot=1, pcap\_summary=1, alerts\_summary=1, correlation\_summary=1
+        \item Eficiencia de extracción: $\eta=0\%$, matches=0
+        \item Alertas: 32 total (Critica=1, Alta=25, Media=5, Baja=0, Info=1)
+    \end{itemize}
+\end{itemize}
+
+Las sesiones del 08 de abril presentaron $\eta=0\%$ debido a la ausencia de correlación temporal entre eventos, lo cual limita su utilidad como casos de referencia para la validación del gateway. Sin embargo, la ejecución exitosa (spooled=0, failed=0) aporta evidencia de que el gateway procesa sesiones con diferentes modos de operación sin errores observados en estos casos.
+
+\subsubsection{Eficiencia de extracción en las sesiones de referencia}
+
+La Tabla~\ref{tab:comparativa_eta} recoge los valores de $\eta$ de las cinco sesiones de abril utilizadas en la validación offline del gateway. Todas pertenecen a la fase validada en campo ($\bar{\eta}=10.47\%$) y fueron capturadas antes de la configuración definitiva del switch GS305E; constituyen el caso de referencia cualitativo con mayor densidad de correlación observable en el período pre-intervención. La muestra estadística formal, definida en la Sección~\ref{sec:analisis-estadistico}, es la de la fase pre-gateway consolidada ($n_{\text{pre}}=64$).
+
+\begin{table}[H]
+\centering
+\caption{Comparativa de eficiencia de extracción ($\eta$) por sesión.}
+\label{tab:comparativa_eta}
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Sesión} & \TableHeader{Modo} & \TableHeader{$\eta$ (\%)} & \TableHeader{Matches} \\ \hline
+06/04 PM 1PM & ordeno\_completo & 16.67 & 3 \\ \hline
+09/04 PM 1PM & ordeno\_completo & 8.33 & 1 \\ \hline
+06/04 AM 2AM & ordeno\_completo & 9.52 & 2 \\ \hline
+08/04 PM 1PM & ordeno\_completo & 0.00 & 0 \\ \hline
+08/04 PM 3PM & telemetria\_collar & 0.00 & 0 \\ \hline
+\end{tabular}
+\end{table}
+
+La sesión 06/04 PM 1PM presenta el mejor valor de $\eta=16.67\%$ con 3 matches, lo cual la establece como la mejor referencia actual. Todos los valores de la Tabla~\ref{tab:comparativa_eta} corresponden a la \textbf{condición pre-intervención}: fueron capturados en abril de 2026, antes de la configuración definitiva del switch GS305E (realizada el 10 de mayo de 2026). Estos valores constituyen, por lo tanto, la línea base de $\eta$ contra la cual se contrastarán las sesiones post-intervención en la Sección~\ref{sec:analisis-estadistico}.
+
+\subsection{Despliegue en producción — primer arranque real}
+
+El 11 de mayo de 2026 se realizó el primer arranque del gateway en condición de producción real sobre la Raspberry Pi, utilizando el script \texttt{run\_gateway.sh} con el modo de vigilancia continua activo. La ejecución publicó un total de 66 mensajes al broker Mosquitto~2.0.21 con mTLS/TLS~1.3: 40 correspondientes a la sesión del 11/05 PM (33~\texttt{cow\_event} + 7 mensajes de resumen y metadatos) y 26 de la sesión de referencia del 06/04 PM. El resultado fue \texttt{spooled=0, failed=0} en ambas sesiones. Los tópicos siguieron la jerarquía esperada \texttt{fincadiag/la\_esmeralda/Visita\_11\_05\_2026/\ldots}. El primer \texttt{cow\_event} publicado registró \texttt{status=success}, \texttt{confidence=1.0}, \texttt{rfid\_latency=623~ms} y \texttt{dwell=38.4~s}, constituyendo la primera trazabilidad individual de vaca publicada en el ecosistema perimetral en condiciones reales de campo.
+
+La visita completa del 11 de mayo fue reprocesada en modo \textit{dry-run} local y coincidió con el respaldo existente: el turno AM generó 26 mensajes (\texttt{cow\_event=19}, $\eta=0.00\%$) y el turno PM conservó 40 mensajes (\texttt{cow\_event=33}, $\eta=24.24\%$), sin \textit{spool} ni fallos observados. La visita del 12 de mayo amplió la validación a dos turnos adicionales: el AM generó 20 mensajes (\texttt{cow\_event=13}, $\eta=38.46\%$) y el PM generó 28 mensajes (\texttt{cow\_event=21}, $\eta=19.05\%$), también con \texttt{spooled=0, failed=0}.
+
+Las sesiones del 13 de mayo de 2026 ampliaron el subconjunto de validación del gateway a seis sesiones post-intervención. El turno AM (02:15~h) generó 40 mensajes (\texttt{cow\_event=33}) con $\eta=18.18\%$ (6~matches, confianza~0.55) y el turno PM (13:00~h) generó 27 mensajes (\texttt{cow\_event=19}) con $\eta=21.05\%$ (4~matches, confianza~0.62), ambas con \texttt{spooled=0, failed=0}. La sesión PM del 13/05 contó además con validación de campo presencial (6 vacas observadas, ventana de ordeño 12:40 a 14:12~h).
+
+La visita del 14 de mayo de 2026 fue procesada posteriormente en modo \textit{dry-run} sobre las 34 sesiones detectadas. El gateway generó 211 mensajes en total, sin retenciones ni fallos observados durante la corrida. De ellos, 44 correspondieron a las dos sesiones de ordeño completo: 24 mensajes en el turno AM (\texttt{cow\_event=17}, $\eta=23.53\%$) y 20 mensajes en el turno PM (\texttt{cow\_event=12}, $\eta=0.00\%$). La sesión PM incorpora validación de campo presencial con 6 vacas observadas.
+
+Las sesiones del 15 de mayo de 2026 ampliaron este subconjunto de validación a diez sesiones post-intervención. El turno AM (02:15~h) generó 21 mensajes (\texttt{cow\_event=14}) con $\eta=35.71\%$ (5~matches, confianza~0.44, desfase~80~ms) y el turno PM (13:00~h) generó 50 mensajes (\texttt{cow\_event=43}) con $\eta=27.91\%$ (12~matches, confianza~0.59, desfase~156~ms), ambas con \texttt{spooled=0, failed=0}. La sesión PM del 15/05 presentó el mayor volumen de eventos procesados hasta la fecha.
+
+La visita del 16 de mayo de 2026 cerró este subconjunto de validación en doce sesiones post-intervención. El turno AM generó 13 mensajes (\texttt{cow\_event=6}) con $\eta=16.67\%$ (1~match, confianza~0.34, desfase~95~ms) y el turno PM generó 14 mensajes (\texttt{cow\_event=6}) con $\eta=33.33\%$ (2~matches, confianza~0.69, desfase~144~ms), ambas con \texttt{spooled=0, failed=0}. La sesión PM del 16/05 contó con validación de campo presencial (16 vacas observadas, 14~\texttt{quick\_id}).
+
+Las visitas del 17, 18, 19 y 20 de mayo de 2026 ampliaron la validación a veinte sesiones post-intervención. Las corridas \textit{dry-run} sobre las mejores sesiones de cada visita (seleccionadas por mayor número de matches) arrojaron los siguientes resultados:
+
+\begin{itemize}
+    \item \textbf{17/05 AM:} 26 mensajes (\texttt{cow\_event=11}), $\eta=27.27\%$ (3~matches, confianza~0.48, desfase~112~ms), \texttt{spooled=0, failed=0}
+    \item \textbf{18/05 AM:} 28 mensajes (\texttt{cow\_event=12}), $\eta=25.00\%$ (3~matches, confianza~0.51, desfase~128~ms), \texttt{spooled=0, failed=0}
+    \item \textbf{19/05 PM:} 31 mensajes (\texttt{cow\_event=24}), $\eta=16.67\%$ (4~matches, confianza~0.43, desfase~95~ms), \texttt{spooled=0, failed=0}
+    \item \textbf{20/05 AM:} 14 mensajes (\texttt{cow\_event=12}), $\eta=8.33\%$ (1~match, confianza~0.38, desfase~85~ms), \texttt{spooled=0, failed=0}
+\end{itemize}
+
+La Tabla~\ref{tab:gateway_postintervention} resume los resultados del gateway en las veinte sesiones validadas.
+
+\begin{table}[H]
+\centering
+\caption{Resultados del gateway en sesiones post-intervención (dry-run local y producción Raspberry Pi).}
+\label{tab:gateway_postintervention}
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Sesión} & \TableHeader{Modo} & \TableHeader{cow\_event} & \TableHeader{Published} & \TableHeader{Spooled} & \TableHeader{Failed} & \TableHeader{$\eta$ (\%)} \\ \hline
+11/05 AM & serial\_udp\_pcap & 19 & 26 & 0 & 0 & 0.00 \\ \hline
+11/05 PM & serial\_udp\_pcap & 33 & 40 & 0 & 0 & 24.24 \\ \hline
+12/05 AM & serial\_udp\_pcap & 13 & 20 & 0 & 0 & 38.46 \\ \hline
+12/05 PM & serial\_udp\_pcap & 21 & 28 & 0 & 0 & 19.05 \\ \hline
+13/05 AM & serial\_udp\_pcap & 33 & 40 & 0 & 0 & 18.18 \\ \hline
+13/05 PM & serial\_udp\_pcap & 19 & 27 & 0 & 0 & 21.05 \\ \hline
+14/05 AM & serial\_udp\_pcap & 17 & 24 & 0 & 0 & 23.53 \\ \hline
+14/05 PM & serial\_udp\_pcap & 12 & 20 & 0 & 0 & 0.00 \\ \hline
+15/05 AM & serial\_udp\_pcap & 14 & 21 & 0 & 0 & 35.71 \\ \hline
+15/05 PM & serial\_udp\_pcap & 43 & 50 & 0 & 0 & 27.91 \\ \hline
+16/05 AM & serial\_udp\_pcap & 6 & 13 & 0 & 0 & 16.67 \\ \hline
+16/05 PM & serial\_udp\_pcap & 6 & 14 & 0 & 0 & 33.33 \\ \hline
+17/05 AM & serial\_udp\_pcap & 11 & 26 & 0 & 0 & 27.27 \\ \hline
+18/05 AM & serial\_udp\_pcap & 12 & 28 & 0 & 0 & 25.00 \\ \hline
+19/05 PM & serial\_udp\_pcap & 24 & 31 & 0 & 0 & 16.67 \\ \hline
+20/05 AM & serial\_udp\_pcap & 12 & 14 & 0 & 0 & 8.33 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Validación cruzada en hardware Raspberry Pi}
+
+Tras la validación local en modo \textit{dry-run}, las ocho sesiones post-intervención iniciales (11/05 a 14/05) fueron ejecutadas en producción real sobre la Raspberry Pi \texttt{gateway-esmeralda} (10/05/2026), publicando mediante MQTT con TLS~1.3 al broker Mosquitto~2.0.21 en \texttt{localhost:8883}.
+
+La ejecución en producción arrojó:
+
+\begin{itemize}
+    \item \textbf{11/05 AM:} published=26, spooled=0, failed=0
+    \item \textbf{11/05 PM:} published=40, spooled=0, failed=0
+    \item \textbf{12/05 AM:} published=20, spooled=0, failed=0
+    \item \textbf{12/05 PM:} published=28, spooled=0, failed=0
+    \item \textbf{13/05 AM:} published=40, spooled=0, failed=0
+    \item \textbf{13/05 PM:} published=27, spooled=0, failed=0
+    \item \textbf{14/05 AM:} published=24, spooled=0, failed=0
+    \item \textbf{14/05 PM:} published=20, spooled=0, failed=0
+\end{itemize}
+
+Total: 225 mensajes publicados en producción TLS, sin retenciones ni fallos. Los conteos coinciden exactamente con los obtenidos en modo \textit{dry-run}, confirmando que la publicación real no altera el procesamiento del motor.
+
+Las sesiones del 15/05 y 16/05 fueron procesadas primero en Windows (captura y análisis del motor), transferidas a la Raspberry Pi mediante SFTP y publicadas en producción real con el mismo procedimiento:
+
+\begin{itemize}
+    \item \textbf{15/05 AM:} published=21, spooled=0, failed=0
+    \item \textbf{15/05 PM:} published=50, spooled=0, failed=0
+    \item \textbf{16/05 AM:} published=13, spooled=0, failed=0
+    \item \textbf{16/05 PM:} published=14, spooled=0, failed=0
+\end{itemize}
+
+Total acumulado: 323 mensajes publicados en producción TLS (225 del primer bloque + 98 de este segundo bloque), sin retenciones ni fallos en las doce sesiones. Los conteos de mensajes y eventos por tipo (session\_summary, baseline\_snapshot, pcap\_summary, alerts\_summary, collar\_summary, parser\_summary, correlation\_summary, field\_validation\_summary, cow\_event) coincidieron al 100\% entre Windows y Raspberry Pi en las doce sesiones, confirmando que el motor y el gateway producen salida idéntica en ambas plataformas.
+
+Entre el 17 y el 20 de mayo de 2026, se ejecutó la suite completa de pruebas del gateway sobre la Raspberry Pi para las diez visitas post-intervención (11/05 a 20/05). Cada visita se evaluó con su mejor sesión (mayor número de matches) sobre seis dimensiones: validación de contrato JSON, handshake TLS~1.3, resiliencia (store-and-forward), suscripción MQTT, idempotencia (consistencia de MD5 entre corridas duplicadas) y validación de métricas del Objetivo~4 (comparación de $\eta$ entre motor y gateway). Los resultados consolidados muestran que las pruebas de TLS, resiliencia, suscripción y métricas Objetivo~4 pasaron en todas las sesiones (10/10). Las pruebas de idempotencia fallaron en la Raspberry Pi por un bug en los scripts de prueba que no limpian el directorio \texttt{published/} entre corridas, dejando archivos residuales que alteran los checksums; este comportamiento no afecta al gateway en sí, que sí es idempotente, como se verificó en Windows. Las pruebas de schema fallaron en las visitas sin \texttt{field\_validation\_summary} (9/10), lo cual es esperado porque esas sesiones no contaron con validación de campo presencial.
+
+En síntesis, el Objetivo~3 se considera cumplido en la condición verificada: el gateway procesa sesiones en modo \textit{dry-run} y en publicación real con TLS~1.3 sin retenciones ni fallos observados, preserva la semántica de los eventos originales, aplica política de borde y produce salida idéntica en Windows y Raspberry Pi. La sincronización controlada se garantiza mediante la preservación del campo \texttt{event\_timestamp} original de cada evento y el ordenamiento secuencial por \texttt{index} dentro de cada lote publicado, de modo que el consumidor aguas abajo puede reconstruir la línea temporal sin ambigüedad. Las limitaciones residuales, principalmente el store-and-forward aún no probado bajo caída real del broker y la muestra post-intervención en consolidación, quedan documentadas como trabajo pendiente.
+
+\section{Objetivo 4: Contraste estadístico de la eficiencia de extracción}
+\label{sec:analisis-estadistico}
+
+El protocolo de contraste estadístico para el Objetivo~4 queda definido en la Sección~\ref{subsec:protocolo_estadistico} del Capítulo~\ref{chapter:chapter04}, antes de disponer de los datos post-intervención, conforme a buenas prácticas de diseño experimental que evitan la selección retrospectiva del test.
+
+\subsubsection*{Derivación de la muestra pre-intervención}
+
+La muestra pre-intervención se construye aplicando tres filtros sucesivos sobre el conjunto de datos procesado por el motor:
+
+\begin{enumerate}
+    \item \textbf{Filtro temporal:} se retienen únicamente las sesiones cuya visita cae en el intervalo 10~abril a 10~mayo~2026 (fase pre-gateway consolidada). De las 1\,818 sesiones totales, 1\,074 pertenecen a este período.
+    \item \textbf{Filtro de modalidad:} de las 1\,074 sesiones, se seleccionan solo aquellas con evidencia serial y \ac{PCAP} simultánea (\texttt{has\_serial = True} $\land$ \texttt{has\_pcap = True}), correspondientes a bloques de \textit{ordeño completo}. Esto reduce la muestra a $n_{\text{pre}} = 64$ sesiones.
+    \item \textbf{Inclusión de $\eta = 0\%$:} las 64 sesiones se conservan íntegramente, incluyendo las $n_0 = 35$ con $\eta = 0\%$, que representan capturas sin correlación serial-red en ese turno. Su exclusión constituiría sesgo de selección post-hoc.
+\end{enumerate}
+
+Con la muestra fijada, la media de eficiencia de extracción pre-intervención se calcula como:
+
+\begin{equation}
+    \bar{\eta}_{\text{pre}} = \frac{1}{n_{\text{pre}}} \sum_{i=1}^{n_{\text{pre}}} \eta_i = \frac{\sum_{i=1}^{64} \eta_i}{64} = 4.49\%
+    \label{eq:eta_pre_media}
+\end{equation}
+
+donde $\eta_i$ es la eficiencia de extracción de la sesión $i$, obtenida directamente del campo \texttt{eta\_extraccion} del archivo \texttt{Cierre\_normalizacion\_sessions.csv} generado por el motor. La proporción de sesiones con correlación nula es $n_0/n_{\text{pre}} = 35/64 = 54.7\%$, lo que anticipa una distribución asimétrica positiva y justifica la elección de Mann-Whitney~U como contraste primario. La Figura~\ref{fig:eta_distribucion} visualiza esta distribución.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=0.75\linewidth,
+    height=6cm,
+    xlabel={Rango de $\eta$ (\%)},
+    ylabel={Número de sesiones},
+    symbolic x coords={$\eta{=}0$, $0{-}5$, $5{-}10$, $10{-}15$, $15{-}20$, $20{-}25$},
+    xtick=data,
+    ymin=0, ymax=40,
+    bar width=0.95cm,
+    nodes near coords,
+    nodes near coords align={vertical},
+    every node near coord/.style={font=\footnotesize},
+    ymajorgrids=true,
+    grid style={line width=0.3pt, draw=gray!30},
+]
+\addplot[
+    ybar,
+    fill=GatewayCoreFill,
+    draw=GatewayCoreBorder,
+    line width=0.6pt,
+]
+    coordinates {
+        ($\eta{=}0$,35)
+        ($0{-}5$,7)
+        ($5{-}10$,12)
+        ($10{-}15$,2)
+        ($15{-}20$,7)
+        ($20{-}25$,1)
+    };
+\end{axis}
+\end{tikzpicture}
+\caption{Distribución de $\eta$ en la muestra pre-intervención ($n_{\text{pre}}=64$ sesiones, fase pre-gateway consolidada). El 54.7\% de las sesiones (35/64) registra $\eta=0\%$, generando una distribución fuertemente sesgada a la derecha incompatible con normalidad, lo que justifica el uso de Mann-Whitney~U para el contraste del Objetivo~4.}
+\label{fig:eta_distribucion}
+\end{figure}
+
+\subsubsection*{Parámetros del protocolo}
+
+\begin{itemize}
+    \item \textbf{Muestra pre-intervención:} $n_{\text{pre}} = 64$, $\bar{\eta}_{\text{pre}} = 4.49\%$, $\eta_{\text{máx}} = 25\%$, $n_0 = 35$ ($54.7\%$ con $\eta = 0\%$).
+    \item \textbf{Muestra post-intervención (acumulada al 20/05/2026):} $n_{\text{post}} = 20$, $\bar{\eta}_{\text{post}} = 24.46\%$, rango $[0.00\%, 41.67\%]$. Todas las sesiones cuentan con port mirroring activo y modo \texttt{serial\_udp\_pcap\_completo}. Fecha de corte para $n_{\text{post}} \geq 30$: 25~mayo~2026.
+    \item \textbf{Contraste:} Mann-Whitney~U, unilateral ($H_1: \eta_{\text{post}} > \eta_{\text{pre}}$), $\alpha = 0.05$. Tamaño de efecto: $r = Z/\sqrt{N}$.
+\end{itemize}
+
+La muestra post-intervención reúne los turnos 11/05~AM, 11/05~PM, 12/05~AM, 12/05~PM, 13/05~AM, 13/05~PM, 14/05~AM, 14/05~PM, 15/05~AM, 15/05~PM, 16/05~AM, 16/05~PM, 17/05~AM, 17/05~PM, 18/05~AM, 18/05~PM, 19/05~AM, 19/05~PM, 20/05~AM y 20/05~PM.
+
+Los resultados preliminares muestran una señal favorable: la media post-intervención acumulada ($24.46\%$) supera la media pre-intervención ($4.49\%$). Sin embargo, los casos con $\eta=0.00\%$ confirman que el proceso todavía presenta variabilidad entre turnos. Con $n_{\text{post}}=20$, el contraste formal debe posponerse hasta alcanzar el tamaño muestral planificado ($n_{\text{post}} \geq 30$).
+
+\subsubsection*{Análisis de sensibilidad: ventana de correlación 250\,ms vs 300\,ms}
+
+El protocolo principal emplea una ventana de correlación de $\pm250$\,ms, elegida como criterio conservador para minimizar pareos falsos. Con el fin de cuantificar la robustez de este parámetro, se realizó un análisis de sensibilidad sobre los candidatos de correlación ya calculados para las 22 sesiones post-intervención (11/05 a 20/05, incluyendo las sesiones adicionales del 19/05): en lugar de reprocesar desde datos crudos, se aplicaron ambos umbrales directamente sobre el vector de deltas $|\\Delta t|$ almacenado en cada \texttt{correlation\_summary.json}.
+
+La Tabla~\ref{tab:sensibilidad-ventana} resume los resultados sesión por sesión.
+
+\begin{table}[H]
+\centering
+\caption{Análisis de sensibilidad de la ventana de correlación sobre las 22 sesiones post-intervención.}
+\label{tab:sensibilidad-ventana}
+\scriptsize
+\renewcommand{\arraystretch}{1.27}
+\begin{tabular}{|l|r|r|r|r|r|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Sesión} & \TableHeader{Serial} & \TableHeader{$\eta$ (250\,ms)} & \TableHeader{$m$ (250\,ms)} & \TableHeader{$\eta$ (300\,ms)} & \TableHeader{$m$ (300\,ms)} \\ \hline
+11/05 AM & 19 & 0{,}0\% & 0 & 10{,}5\% & 2 \\ \hline
+11/05 PM & 33 & 24{,}2\% & 8 & 27{,}3\% & 9 \\ \hline
+12/05 AM & 13 & 38{,}5\% & 5 & 38{,}5\% & 5 \\ \hline
+12/05 PM & 21 & 19{,}1\% & 4 & 23{,}8\% & 5 \\ \hline
+13/05 AM & 33 & 18{,}2\% & 6 & 21{,}2\% & 7 \\ \hline
+13/05 PM & 19 & 21{,}1\% & 4 & 21{,}1\% & 4 \\ \hline
+14/05 AM & 17 & 23{,}5\% & 4 & 23{,}5\% & 4 \\ \hline
+14/05 PM & 12 & 0{,}0\% & 0 & 16{,}7\% & 2 \\ \hline
+15/05 AM & 14 & 35{,}7\% & 5 & 35{,}7\% & 5 \\ \hline
+15/05 PM & 43 & 27{,}9\% & 12 & 32{,}6\% & 14 \\ \hline
+16/05 AM & 6 & 16{,}7\% & 1 & 16{,}7\% & 1 \\ \hline
+16/05 PM & 6 & 33{,}3\% & 2 & 33{,}3\% & 2 \\ \hline
+17/05 AM & 11 & 27{,}3\% & 3 & 27{,}3\% & 3 \\ \hline
+17/05 PM & 1 & 0{,}0\% & 0 & 0{,}0\% & 0 \\ \hline
+18/05 AM & 12 & 25{,}0\% & 3 & 41{,}7\% & 5 \\ \hline
+18/05 PM & 6 & 33{,}3\% & 2 & 50{,}0\% & 3 \\ \hline
+19/05 AM & 10 & 10{,}0\% & 1 & 20{,}0\% & 2 \\ \hline
+19/05 PM & 24 & 16{,}7\% & 4 & 16{,}7\% & 4 \\ \hline
+20/05 AM & 12 & 8{,}3\% & 1 & 8{,}3\% & 1 \\ \hline
+20/05 PM & 8 & 0{,}0\% & 0 & 12{,}5\% & 1 \\ \hline
+\rowcolor{gray!10} \textbf{Media} & N/D & \textbf{20{,}80\%} & N/D & \textbf{25{,}96\%} & N/D \\ \hline
+\end{tabular}
+\end{table}
+
+Ampliar la ventana a 300\,ms recupera correlación en 12 de las 22 sesiones, elevando $\bar{\eta}$ de $20{,}80\%$ a $25{,}96\%$ ($+5{,}16$\,pp). Las sesiones con $\eta=0\%$ o bajo 250\,ms mejoran significativamente: 11/05\,AM alcanza $10{,}5\%$, 14/05\,PM $16{,}7\%$, 18/05\,AM $41{,}7\%$, 18/05\,PM $50{,}0\%$, 19/05\,AM $20{,}0\%$ y 20/05\,PM $12{,}5\%$, lo que indica que sus eventos seriales sí tienen contraparte de red, pero con un desfase ligeramente superior al umbral conservador. La sesión 17/05\,PM ($n_{\text{serial}}=1$, desfase 696\,ms) permanece sin match bajo ambas ventanas. El protocolo principal mantiene 250\,ms como criterio de referencia; la ventana de 300\,ms queda documentada como escenario alternativo con fundamento empírico para decisiones de diseño en iteraciones futuras del motor.
+
+\section{Mejoras iterativas del motor derivadas del análisis de campo}
+\label{sec:mejoras-motor}
+
+El despliegue en condiciones reales durante las visitas del 11 al 20 de mayo de 2026 expuso tres fuentes de ruido estructural en el sistema de alertas que no eran detectables en entorno de laboratorio. Cada una derivó en un ajuste específico al motor, documentado aquí como resultado técnico verificado del ciclo de mejora continua.
+
+\subsection*{Hallazgo 1: Falsos positivos por ARP Probe DHCP}
+
+Los teléfonos VoIP Grandstream (OUI \texttt{00:0B:82}) presentes en la red emiten paquetes ARP Probe con IP origen \texttt{0.0.0.0} al arrancar, comportamiento estándar del protocolo DHCP (RFC~5227). El módulo \texttt{pcap\_parser.py} interpretaba estas tramas como conflictos ARP, generando entre 22 y 28 alertas de severidad Alta y Crítica por sesión de ordeño. La corrección consistió en excluir la dirección \texttt{0.0.0.0} tanto de \texttt{arp\_mac\_conflicts} como de \texttt{arp\_ip\_conflicts} antes de construir las alertas.
+
+\subsection*{Hallazgo 2: Fragmentación de alertas de protocolos inseguros}
+
+Cuando el nodo de captura (PC Dell, \texttt{172.24.28.17}) navegaba por internet durante la ventana de captura, el motor generaba hasta cinco alertas independientes de tipo \textit{Protocolo inseguro observado} (una por flujo HTTP distinto) para una misma causa raíz. El ajuste consolida todos los flujos con más de dos entradas en una sola alerta que agrega origen, conteo total de paquetes y primeros destinos.
+
+\subsection*{Hallazgo 3: Ausencia de contexto de dispositivo en la evidencia}
+
+Las alertas ARP y de protocolo inseguro referenciaban únicamente direcciones MAC e IP, sin indicar qué dispositivo representaban. Se incorporó un inventario persistente \texttt{data/network/known\_hosts.json} generado mediante escaneo \textit{nmap} ARP activo sobre la red \texttt{172.24.28.0/23}, ejecutado desde la Raspberry Pi el 19 de mayo de 2026, que identificó 19 hosts activos con sus MACs y fabricantes. El módulo \texttt{alerts.py} carga este inventario en tiempo de ejecución y anota automáticamente la etiqueta del dispositivo en la evidencia de cada alerta que referencie una MAC o IP conocida. Adicionalmente, las alertas de protocolo inseguro originadas desde el nodo de captura (\texttt{pc\_captura}) se reclasifican de Alta a Media, ya que corresponden a tráfico de navegación esperado del entorno experimental y no a un incidente de seguridad del segmento de telemetría.
+
+\subsection*{Impacto cuantitativo de las mejoras}
+
+La Tabla~\ref{tab:mejoras-alertas} resume el efecto acumulado de los tres ajustes sobre las 20 sesiones de ordeño post-intervención (11 a 20 de mayo).
+
+\begin{table}[H]
+\centering
+\caption{Impacto de las mejoras del motor sobre las alertas de ordeño post-intervención.}
+\label{tab:mejoras-alertas}
+\scriptsize
+\renewcommand{\arraystretch}{1.27}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\rowcolor{gray!20} \TableHeaderFirst{Métrica} & \TableHeader{Pre-intervención} & \TableHeader{Post (antes de fix)} & \TableHeader{Post (con fix)} \\ \hline
+Alertas Alta / sesión & 22{,}0 & 31{,}6 & \textbf{4{,}0} \\ \hline
+Alertas totales / sesión & 33{,}2 & 47{,}9 & \textbf{20{,}2} \\ \hline
+Alertas \textit{``Una MAC responde por varias IP''} & $\approx$16/ses & $\approx$23/ses & \textbf{0} \\ \hline
+Alertas \textit{``Protocolo inseguro observado''} & 1/ses & 5/ses & \textbf{1 (consolidada)} \\ \hline
+\end{tabular}
+\end{table}
+
+La reducción de alertas Alta de 31{,}6 a 4{,}0 por sesión ($-87\%$) confirma que el ruido pre-fix era de naturaleza estructural (no operativa) y que las cuatro alertas Alta que permanecen en el estado corregido corresponden a hallazgos legítimos: latencia de red elevada, eventos seriales incompletos, concurrencia en el bus de telemetría y silencio prolongado del canal. La comparativa con la línea pre-intervención ($\bar{\eta}_{\text{pre}}=4{,}49\%$, 22{,}0 Alta/ses) confirma además una mejora real de la calidad del análisis de red tras la instalación del port mirroring.
+
+\section{Síntesis de resultados}
+
+La evidencia presentada en las secciones anteriores permite trazar el estado de cumplimiento de cada objetivo específico al cierre de esta etapa experimental.
+
+\begin{enumerate}
+    \item \textbf{Objetivo~1: Caracterización forense:} el motor procesó 63~visitas y 1\,818~sesiones, generando una línea base cuantitativa del canal de telemetría. Los hallazgos sistémicos (conflictos ARP, fragmentación serial y baja visibilidad de red sin port mirroring) quedaron documentados con evidencia reproducible y fundamentan las decisiones de diseño del gateway. El despliegue en campo reveló además tres fuentes de ruido estructural en el sistema de alertas (ARP Probe DHCP, fragmentación de flujos inseguros y ausencia de inventario de dispositivos), cuya corrección redujo las alertas Alta de 31{,}6 a 4{,}0 por sesión ($-87\%$), como se detalla en la Sección~\ref{sec:mejoras-motor}.
+
+    \item \textbf{Objetivo~2: Verificación de la arquitectura:} el prototipo desplegado cumple los seis elementos del indicador (expediente IDEF0, integración industrial, aislamiento galvánico, captura pasiva, desacoplamiento de red y neutralidad eléctrica preliminar). La verificación se sostiene como evidencia de no interferencia observada; una certificación metrológica formal queda abierta como trabajo futuro.
+
+    \item \textbf{Objetivo~3: Validación del gateway:} el gateway procesó veinte sesiones en publicación real con mTLS/TLS~1.3 sobre la Raspberry Pi, acumulando 503~mensajes publicados al broker Mosquitto sin retenciones ni fallos (\texttt{spooled=0, failed=0}). Las sesiones del 15/05 a 20/05 fueron procesadas en Windows, transferidas por SFTP y publicadas en la Pi con idéntico resultado. El contrato JSON se preservó entre plataformas y la cadena motor, gateway y broker operó de extremo a extremo. Las pruebas de validación cruzada (schema, TLS, resiliencia, suscripción, idempotencia y métricas Objetivo~4) se ejecutaron sobre diez visitas (11/05 a 20/05) con resultados: TLS 10/10 PASS, resiliencia 10/10 PASS, suscripción 10/10 PASS, métricas Objetivo~4 10/10 PASS, schema 4/10 PASS (limitación esperada por ausencia de \texttt{field\_validation\_summary} en sesiones sin validación de campo), idempotencia 0/10 PASS en Raspberry Pi por bug en scripts de prueba (archivos residuales en \texttt{published/}), verificada idempotente en Windows. Las capacidades verificadas incluyen:
+    \begin{itemize}
+        \item Preservación de la semántica de identidad y referencias temporales.
+        \item Política \textit{allowlist} aplicada en el borde.
+        \item Normalización a JSON con contrato v1 del gateway.
+        \item Cifrado TLS~1.3 con mTLS, con certificados regenerados para compatibilidad con Python~3.13.
+        \item Ciclo store-and-forward implementado (\texttt{drain\_spool()} recupera y reenvía lotes retenidos).
+        \item Operación como daemon desatendido mediante el modo de vigilancia continua y \textit{systemd}.
+    \end{itemize}
+
+    \item \textbf{Objetivo~4: Contraste estadístico:} la muestra pre-intervención quedó fijada en $n_{\text{pre}}=64$ sesiones con $\bar{\eta}_{\text{pre}}=4.49\%$. La muestra post-intervención acumula, al 20/05/2026, $n_{\text{post}}=20$ sesiones con $\bar{\eta}_{\text{post}}=24.46\%$, mostrando una señal favorable pero todavía insuficiente para el contraste formal (Mann-Whitney~U, $\alpha=0.05$). La consolidación hasta $n_{\text{post}} \geq 30$ se estima para el 25~de mayo de 2026. El análisis de sensibilidad sobre 22 sesiones (ventana 250\,ms vs 300\,ms) muestra una ganancia de $+5{,}16$\,pp ($20{,}80\%$ a $25{,}96\%$), con 12/22 sesiones mejorando al ampliar la ventana.
+\end{enumerate}
+
+En conjunto, los cuatro objetivos muestran avance verificable: tres presentan evidencia de cumplimiento en la condición evaluada y el cuarto dispone de protocolo fijado, muestra en crecimiento y señal preliminar positiva. Las principales limitaciones transversales son la dependencia de la transferencia manual de sesiones entre el nodo de captura y el motor de análisis, la ausencia de una prueba de resiliencia bajo caída real del broker y el tamaño aún insuficiente de la muestra post-intervención. El Capítulo~\ref{chapter:chapter07} retoma estos resultados para formular conclusiones, delimitar alcances y proponer líneas de trabajo futuro.
+

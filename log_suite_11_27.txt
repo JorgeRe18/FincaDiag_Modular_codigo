@@ -1,0 +1,259 @@
+[17:36:59] === DESCUBRIENDO SESIONES 11-27 (matches>0) ===
+[17:37:00]   Mayo 11: TOMA_PM__1PM__Captura_20260511_130005 (matches=8, eta=24.24)
+[17:37:00]   Mayo 12: TOMA_AM__2AM__Captura_20260512_021505 (matches=5, eta=38.46)
+[17:37:00]   Mayo 13: TOMA_AM__2AM__Captura_20260513_021505 (matches=6, eta=18.18)
+[17:37:00]   Mayo 14: TOMA_AM__2AM__Captura_20260514_021505 (matches=4, eta=23.53)
+[17:37:00]   Mayo 15: TOMA_PM__1PM__Captura_20260515_130005 (matches=12, eta=27.91)
+[17:37:00]   Mayo 16: TOMA_PM__1PM__Captura_20260516_130005 (matches=2, eta=33.33)
+[17:37:00]   Mayo 17: TOMA_AM__2AM__Captura_20260517_021505 (matches=3, eta=27.27)
+[17:37:00]   Mayo 18: TOMA_AM__2AM__Captura_20260518_021505 (matches=3, eta=25.0)
+[17:37:00]   Mayo 19: TOMA_AM__2AM__Captura_20260519_021505 (matches=4, eta=16.67)
+[17:37:00]   Mayo 20: TOMA_AM__2AM__Captura_20260520_021505 (matches=1, eta=8.33)
+[17:37:00]   Mayo 21: TOMA_PM__1PM__Captura_20260521_130005 (matches=8, eta=26.67)
+[17:37:00]   Mayo 22: TOMA_PM__1PM__Captura_20260522_130005 (matches=3, eta=15.79)
+[17:37:00]   Mayo 23: TOMA_AM__2AM__Captura_20260523_021505 (matches=5, eta=20.83)
+[17:37:00]   Mayo 24: TOMA_AM__2AM__Captura_20260524_021505 (matches=7, eta=41.18)
+[17:37:00]   Mayo 25: TOMA_PM__1PM__Captura_20260525_130005 (matches=7, eta=58.33)
+[17:37:00]   Mayo 26: TOMA_PM__1PM__Captura_20260526_130201 (matches=3, eta=13.64)
+[17:37:00]   Mayo 27: TOMA_AM__2AM__Captura_20260527_021505 (matches=12, eta=24.0)
+[17:37:00] Total visitas: 17
+[17:37:00] 
+============================================================
+[17:37:00] PARTE A: WINDOWS (Schema + Idempotencia + Obj4)
+[17:37:00] ============================================================
+[17:37:00] 
+Mayo 11 - Visita_11_05_2026
+[17:37:02]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=24.24 eta_gw=24.242424242424242)
+[17:37:02] 
+Mayo 12 - Visita_12_05_2026
+[17:37:04]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=38.46 eta_gw=38.46153846153847)
+[17:37:04] 
+Mayo 13 - Visita_13_05_2026
+[17:37:05]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=18.18 eta_gw=18.181818181818183)
+[17:37:05] 
+Mayo 14 - Visita_14_05_2026
+[17:37:07]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=23.53 eta_gw=23.52941176470588)
+[17:37:07] 
+Mayo 15 - Visita_15_05_2026
+[17:37:08]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=27.91 eta_gw=27.906976744186046)
+[17:37:08] 
+Mayo 16 - Visita_16_05_2026
+[17:37:09]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=33.33 eta_gw=33.33333333333333)
+[17:37:09] 
+Mayo 17 - Visita_17_05_2026
+[17:37:10]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=27.27 eta_gw=27.27272727272727)
+[17:37:10] 
+Mayo 18 - Visita_18_05_2026
+[17:37:12]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=25.0 eta_gw=25.0)
+[17:37:12] 
+Mayo 19 - Visita_19_05_2026
+[17:37:13]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=16.67 eta_gw=16.666666666666664)
+[17:37:13] 
+Mayo 20 - Visita_20_05_2026
+[17:37:14]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=8.33 eta_gw=8.333333333333332)
+[17:37:14] 
+Mayo 21 - Visita_21_05_2026
+[17:37:15]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=26.67 eta_gw=26.666666666666668)
+[17:37:15] 
+Mayo 22 - Visita_22_05_2026
+[17:37:16]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=15.79 eta_gw=15.789473684210526)
+[17:37:16] 
+Mayo 23 - Visita_23_05_2026
+[17:37:17]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=20.83 eta_gw=20.833333333333336)
+[17:37:17] 
+Mayo 24 - Visita_24_05_2026
+[17:37:18]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=41.18 eta_gw=41.17647058823529)
+[17:37:18] 
+Mayo 25 - Visita_25_05_2026
+[17:37:19]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=58.33 eta_gw=58.333333333333336)
+[17:37:19] 
+Mayo 26 - Visita_26_05_2026
+[17:37:21]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=13.64 eta_gw=13.636363636363635)
+[17:37:21] 
+Mayo 27 - Visita_27_05_2026
+[17:37:22]   Schema=PASS Idem=PASS Obj4=PASS (eta_motor=24.0 eta_gw=24.0)
+[17:37:22] 
+============================================================
+[17:37:22] PARTE B: RASPBERRY PI (conectando)
+[17:37:22] ============================================================
+[17:37:24] Conectado a Pi
+[17:37:25] Procesos gateway activos en Pi: 1
+[17:37:26] Mosquitto: active
+[17:37:26] 
+--- TLS Handshake (verificacion global) ---
+[17:37:27] TLS output: TLS13=OK
+TLS12=ACCEPTED
+[17:37:27] 
+Mayo 11 - Visita_11_05_2026 (TOMA_PM__1PM__Captura_20260511_130005)
+[17:37:28]   Schema=PASS
+[17:37:29]   Obj4 raw: matches_gw=8 eta_gw=24.242424242424242
+[17:37:29]   Obj4=PASS (motor=8)
+[17:37:30]   Idempotencia=PASS
+[17:38:43]   Resilience raw: SPOOL_FILES=1
+drained=40 failed=0
+RECEIVED=40 SPOOL_AFTER=0
+[17:38:43]   Resilience=PASS Subscribe=PASS (recv=40, spool_after=0)
+[17:38:43] 
+Mayo 12 - Visita_12_05_2026 (TOMA_AM__2AM__Captura_20260512_021505)
+[17:38:44]   Schema=PASS
+[17:38:45]   Obj4 raw: matches_gw=5 eta_gw=38.46153846153847
+[17:38:45]   Obj4=PASS (motor=5)
+[17:38:47]   Idempotencia=PASS
+[17:39:59]   Resilience raw: SPOOL_FILES=1
+drained=20 failed=0
+RECEIVED=20 SPOOL_AFTER=0
+[17:39:59]   Resilience=PASS Subscribe=PASS (recv=20, spool_after=0)
+[17:39:59] 
+Mayo 13 - Visita_13_05_2026 (TOMA_AM__2AM__Captura_20260513_021505)
+[17:40:00]   Schema=PASS
+[17:40:01]   Obj4 raw: matches_gw=6 eta_gw=18.181818181818183
+[17:40:01]   Obj4=PASS (motor=6)
+[17:40:03]   Idempotencia=PASS
+[17:41:15]   Resilience raw: SPOOL_FILES=1
+drained=40 failed=0
+RECEIVED=40 SPOOL_AFTER=0
+[17:41:15]   Resilience=PASS Subscribe=PASS (recv=40, spool_after=0)
+[17:41:15] 
+Mayo 14 - Visita_14_05_2026 (TOMA_AM__2AM__Captura_20260514_021505)
+[17:41:16]   Schema=PASS
+[17:41:17]   Obj4 raw: matches_gw=4 eta_gw=23.52941176470588
+[17:41:17]   Obj4=PASS (motor=4)
+[17:41:19]   Idempotencia=PASS
+[17:42:31]   Resilience raw: SPOOL_FILES=1
+drained=24 failed=0
+RECEIVED=24 SPOOL_AFTER=0
+[17:42:31]   Resilience=PASS Subscribe=PASS (recv=24, spool_after=0)
+[17:42:31] 
+Mayo 15 - Visita_15_05_2026 (TOMA_PM__1PM__Captura_20260515_130005)
+[17:42:32]   Schema=PASS
+[17:42:33]   Obj4 raw: matches_gw=12 eta_gw=27.906976744186046
+[17:42:33]   Obj4=PASS (motor=12)
+[17:42:34]   Idempotencia=PASS
+[17:43:47]   Resilience raw: SPOOL_FILES=1
+drained=50 failed=0
+RECEIVED=50 SPOOL_AFTER=0
+[17:43:47]   Resilience=PASS Subscribe=PASS (recv=50, spool_after=0)
+[17:43:47] 
+Mayo 16 - Visita_16_05_2026 (TOMA_PM__1PM__Captura_20260516_130005)
+[17:43:48]   Schema=PASS
+[17:43:49]   Obj4 raw: matches_gw=2 eta_gw=33.33333333333333
+[17:43:49]   Obj4=PASS (motor=2)
+[17:43:50]   Idempotencia=PASS
+[17:45:03]   Resilience raw: SPOOL_FILES=1
+drained=14 failed=0
+RECEIVED=14 SPOOL_AFTER=0
+[17:45:03]   Resilience=PASS Subscribe=PASS (recv=14, spool_after=0)
+[17:45:03] 
+Mayo 17 - Visita_17_05_2026 (TOMA_AM__2AM__Captura_20260517_021505)
+[17:45:04]   Schema=PASS
+[17:45:05]   Obj4 raw: matches_gw=3 eta_gw=27.27272727272727
+[17:45:05]   Obj4=PASS (motor=3)
+[17:45:06]   Idempotencia=PASS
+[17:46:19]   Resilience raw: SPOOL_FILES=1
+drained=18 failed=0
+RECEIVED=18 SPOOL_AFTER=0
+[17:46:19]   Resilience=PASS Subscribe=PASS (recv=18, spool_after=0)
+[17:46:19] 
+Mayo 18 - Visita_18_05_2026 (TOMA_AM__2AM__Captura_20260518_021505)
+[17:46:20]   Schema=PASS
+[17:46:21]   Obj4 raw: matches_gw=3 eta_gw=25.0
+[17:46:21]   Obj4=PASS (motor=3)
+[17:46:22]   Idempotencia=PASS
+[17:47:35]   Resilience raw: SPOOL_FILES=1
+drained=19 failed=0
+RECEIVED=19 SPOOL_AFTER=0
+[17:47:35]   Resilience=PASS Subscribe=PASS (recv=19, spool_after=0)
+[17:47:35] 
+Mayo 19 - Visita_19_05_2026 (TOMA_AM__2AM__Captura_20260519_021505)
+[17:47:36]   Schema=PASS
+[17:47:37]   Obj4 raw: matches_gw=4 eta_gw=16.666666666666664
+[17:47:37]   Obj4=PASS (motor=4)
+[17:47:38]   Idempotencia=PASS
+[17:48:51]   Resilience raw: SPOOL_FILES=1
+drained=31 failed=0
+RECEIVED=31 SPOOL_AFTER=0
+[17:48:51]   Resilience=PASS Subscribe=PASS (recv=31, spool_after=0)
+[17:48:51] 
+Mayo 20 - Visita_20_05_2026 (TOMA_AM__2AM__Captura_20260520_021505)
+[17:48:52]   Schema=PASS
+[17:48:53]   Obj4 raw: matches_gw=1 eta_gw=8.333333333333332
+[17:48:53]   Obj4=PASS (motor=1)
+[17:48:54]   Idempotencia=PASS
+[17:50:07]   Resilience raw: SPOOL_FILES=1
+drained=19 failed=0
+RECEIVED=19 SPOOL_AFTER=0
+[17:50:07]   Resilience=PASS Subscribe=PASS (recv=19, spool_after=0)
+[17:50:07] 
+Mayo 21 - Visita_21_05_2026 (TOMA_PM__1PM__Captura_20260521_130005)
+[17:50:08]   Schema=PASS
+[17:50:09]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:50:09]   Obj4=FAIL (motor=8)
+[17:50:10]   Idempotencia=PASS
+[17:51:22]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:51:22]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:51:22] 
+Mayo 22 - Visita_22_05_2026 (TOMA_PM__1PM__Captura_20260522_130005)
+[17:51:23]   Schema=PASS
+[17:51:25]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:51:25]   Obj4=FAIL (motor=3)
+[17:51:26]   Idempotencia=PASS
+[17:52:38]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:52:38]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:52:38] 
+Mayo 23 - Visita_23_05_2026 (TOMA_AM__2AM__Captura_20260523_021505)
+[17:52:39]   Schema=PASS
+[17:52:40]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:52:40]   Obj4=FAIL (motor=5)
+[17:52:41]   Idempotencia=PASS
+[17:53:54]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:53:54]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:53:54] 
+Mayo 24 - Visita_24_05_2026 (TOMA_AM__2AM__Captura_20260524_021505)
+[17:53:55]   Schema=PASS
+[17:53:56]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:53:56]   Obj4=FAIL (motor=7)
+[17:53:57]   Idempotencia=PASS
+[17:55:10]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:55:10]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:55:10] 
+Mayo 25 - Visita_25_05_2026 (TOMA_PM__1PM__Captura_20260525_130005)
+[17:55:11]   Schema=PASS
+[17:55:12]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:55:12]   Obj4=FAIL (motor=7)
+[17:55:13]   Idempotencia=PASS
+[17:56:25]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:56:25]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:56:25] 
+Mayo 26 - Visita_26_05_2026 (TOMA_PM__1PM__Captura_20260526_130201)
+[17:56:26]   Schema=PASS
+[17:56:27]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:56:27]   Obj4=FAIL (motor=3)
+[17:56:28]   Idempotencia=PASS
+[17:57:41]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:57:41]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:57:41] 
+Mayo 27 - Visita_27_05_2026 (TOMA_AM__2AM__Captura_20260527_021505)
+[17:57:42]   Schema=PASS
+[17:57:43]   Obj4 raw: matches_gw=0 eta_gw=None
+[17:57:43]   Obj4=FAIL (motor=12)
+[17:57:44]   Idempotencia=PASS
+[17:58:56]   Resilience raw: SPOOL_FILES=1
+drained=4 failed=0
+RECEIVED=4 SPOOL_AFTER=0
+[17:58:56]   Resilience=PASS Subscribe=PASS (recv=4, spool_after=0)
+[17:58:56] 
+Pi desconectada
+[17:58:56] 
+JSON guardado: C:\Users\jorge\OneDrive\Documentos\FincaDiag_Modular\resultados_suite_11_27_FINAL.json

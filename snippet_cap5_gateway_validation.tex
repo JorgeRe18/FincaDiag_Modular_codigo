@@ -1,0 +1,121 @@
+% ============================================================
+% SNIPPET PARA CAPÍTULO 5 — Sección de validación del gateway
+% Insertar después de la descripción del ciclo watch / systemd
+% ============================================================
+
+\subsection{Validación de laboratorio y verificación en campo}
+\label{subsec:validacion_gateway_campo}
+
+La descripción de la arquitectura en las secciones anteriores cubre el diseño
+declarado; esta sección documenta la verificación empírica de que la pasarela
+se comporta conforme a ese diseño en condiciones reales de campo. La
+verificación se articuló en dos planos complementarios: pruebas de dry-run
+en Windows para confirmar la normalización y consistencia de la salida del
+motor, y pruebas sobre el nodo Raspberry Pi para confirmar el comportamiento
+del canal \ac{MQTT}/\ac{TLS} y la resiliencia del spool ante fallos del broker.
+
+La suite cubrió las sesiones de ordeño completo del período posterior a la
+intervención (11--28 de mayo de 2026, 33 sesiones con correlación efectiva en
+17 visitas) y agrupó seis tipos de verificación. Las pruebas se dividieron en
+dos grupos: las que dependen del contenido de cada sesión (esquema, idempotencia
+y consistencia de $\eta$) se ejecutaron sobre las 33 sesiones mediante dry-run
+en Windows; las que verifican propiedades del sistema (seguridad del canal,
+resiliencia ante fallos y recepción confirmada) se ejecutaron sobre una muestra
+representativa de 10 visitas del tramo 11--20 de mayo en la Raspberry Pi, más
+una verificación spot sobre el nodo en operación (29/05/2026).
+
+La Tabla~\ref{tab:gateway_validation_suite} resume los resultados.
+
+\begin{table}[H]
+\centering
+\caption{Resultados de la suite de validación de la pasarela perimetral
+         (período post-intervención, 17 visitas, 33 sesiones, 11--28 de mayo de 2026).}
+\label{tab:gateway_validation_suite}
+\footnotesize
+\renewcommand{\arraystretch}{1.22}
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}p{3.8cm}|}
+\hline
+\rowcolor{gray!20}
+\TableHeaderFirst{Prueba} & \TableHeader{Alcance} & \TableHeader{Resultado} & \TableHeader{Observación} \\ \hline
+
+Esquema \acs{JSON} &
+Estructura y tipos de campo de cada lote publicado &
+\textbf{33/33} \acs{PASS}$^*$ &
+Verificado por dry-run sobre cada sesión (Windows). \\ \hline
+
+Idempotencia &
+Reproducibilidad de la salida entre corridas aisladas &
+\textbf{33/33} \acs{PASS} &
+Verificado por dry-run sobre cada sesión; \acs{MD5} idéntico en directorios aislados. \\ \hline
+
+Consistencia $\eta$ &
+Exactitud de la métrica publicada vs.\ métrica del motor &
+\textbf{33/33} \acs{PASS} &
+$\eta_{\text{motor}} = \eta_{\text{gateway}}$ en las 33 sesiones
+($\bar{\eta}_{\text{post}} = 26{,}25\%$; rango: $8{,}3\%$--$100{,}0\%$). \\ \hline
+
+\acs{TLS} Handshake &
+Cifrado y versión mínima del canal \acs{MQTT} &
+\textbf{11/11} \acs{PASS} &
+Verificado en muestra representativa de visitas en Pi; \acs{TLS} 1.2 rechazado,
+1.3 aceptado. \\ \hline
+
+Resiliencia del spool &
+Continuidad ante caída del broker \acs{MQTT} &
+\textbf{11/11} \acs{PASS} &
+Lote completo drenado tras recuperación del broker; spool residual $= 0$. \\ \hline
+
+Suscripción \acs{MQTT} &
+Recepción confirmada por suscriptor externo &
+\textbf{11/11} \acs{PASS} &
+Mensajes verificados con \texttt{mosquitto\_sub} activo post-recuperación. \\ \hline
+
+\end{tabularx}
+\begin{flushleft}
+\footnotesize $^*$El tipo \texttt{field\_validation\_summary} no se genera en sesiones
+sin validación presencial simultánea, por lo que su ausencia no constituye un
+error de normalización. Las pruebas de canal seguro y resiliencia son propiedades
+del sistema; su verificación sobre muestra representativa de 10 visitas es
+metodológicamente suficiente porque no dependen del contenido particular de cada
+sesión.
+\end{flushleft}
+\end{table}
+
+La prueba de resiliencia merece descripción adicional porque expone el
+comportamiento de extremo a extremo del spool. La secuencia de verificación
+fue: (i)~detener el broker \texttt{mosquitto}, (ii)~ejecutar el gateway para
+que espole el lote en disco, (iii)~reiniciar el broker, (iv)~activar un
+suscriptor externo e invocar el drenado, y (v)~confirmar que el suscriptor
+recibe exactamente los mensajes esperados y que el spool queda vacío. El
+Listado~\ref{lst:resiliencia_salida} muestra la salida representativa de esa
+secuencia sobre una sesión de 13 mensajes.
+
+\begin{lstlisting}[
+  language=bash,
+  caption={Salida del test de resiliencia en \texttt{gateway-esmeralda} (29/05/2026).},
+  label=lst:resiliencia_salida,
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single
+]
+--- Mosquitto detenido ---
+13 /tmp/spool/TOMA_PM__1PM__Captura_20260518_130005.jsonl
+--- Mosquitto reiniciado ---
+drained=13  failed=0
+--- Resultados ---
+Mensajes recibidos : 13
+Spool residual     : 0
+[PASS] Resiliencia OK
+\end{lstlisting}
+
+Durante esta verificación se identificó que la entrega de mensajes con
+\acs{QoS}$\geq 1$ requería que el bucle de red del cliente \texttt{paho-mqtt}
+permaneciera activo hasta la confirmación del broker. Se corrigió
+\texttt{publish\_batch} añadiendo \texttt{loop\_start()} antes de publicar y
+\texttt{loop\_stop()} tras confirmar la entrega, garantizando que cada lote
+se transmite completamente antes de cerrar la conexión sin alterar el
+comportamiento del spool ni el protocolo de reintentos.
+
+Con estas pruebas se cerró la verificación del componente de transporte. El
+contraste estadístico de $\eta$ pre/post intervención se presenta en el
+Capítulo~\ref{chapter:chapter06}.
