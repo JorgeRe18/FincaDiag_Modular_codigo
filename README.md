@@ -1,34 +1,34 @@
 # FincaDiag Modular
 
-Base modular para analizar:
+Motor de análisis modular para el sistema FincaDiag (TFG). Procesa capturas de campo de una finca ganadera y genera informes técnicos y ejecutivos por sesión y por lote de visitas.
 
-- baseline de red
-- telemetria serial
-- trafico PCAP
-- correlacion temporal serial <-> red
-- alertas de ciberseguridad por capa
-- reglas de prioridad para un motor perimetral
+Capacidades principales:
+
+- Baseline de red (ARP, topología, top talkers)
+- Telemetría serial (collares SCR, eventos por vaca, confianza del parser)
+- Tráfico PCAP (análisis general + canal de telemetría filtrado)
+- Correlación temporal serial ↔ red (η de extracción, desfase medio)
+- Alertas de ciberseguridad por capa (baseline, serial, PCAP, telemetría, correlación)
+- Publicación normalizada vía gateway MQTT/TLS (Objetivo 3)
+- Pruebas de resiliencia del gateway en producción (Objetivo 4)
 
 ## Estructura
 
 ```text
 FincaDiag_Modular/
-├─ data/
-│  ├─ raw/
-│  └─ processed/
-├─ reports/
-├─ src/
-│  └─ fincadiag/
-│     ├─ analysis/
-│     ├─ dashboard/
-│     ├─ export/
-│     ├─ parsers/
-│     ├─ cli.py
-│     ├─ config.py
-│     ├─ models.py
-│     └─ utils.py
-├─ main.py
-└─ requirements.txt
+├─ src/fincadiag/        ← motor analítico (parsers, analysis, export, gateway, dashboard)
+├─ Gateway/             ← código del gateway MQTT/TLS y pruebas de resiliencia Obj4
+│  └─ tests/
+│     └─ obj4_resilience_staged.py
+├─ scripts/             ← utilidades de análisis y generación de reportes
+├─ docs/                ← documentación interna
+├─ data/                ← capturas raw y datos procesados (no versionados)
+├─ reports/             ← informes generados (no versionados)
+├─ main.py              ← punto de entrada del motor
+├─ requirements.txt
+├─ install_obj4_cron.py ← gestión del cron de Obj4 en la Raspberry Pi
+├─ run_obj4_all_now.py  ← ejecución manual de Obj4 vía SSH
+└─ diag_obj4_pi.py      ← diagnóstico remoto de la Pi
 ```
 
 ## Flujo recomendado
@@ -303,13 +303,13 @@ El motor soporta generar informes orientados al objetivo del TFG seleccionado:
 
 ```powershell
 # Objetivo 1 (default): baseline, serial, pcap, correlacion, alertas
-python .\main.py --roots $visitas --objetivo 1
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 1
 
 # Objetivo 3: gateway, publicacion MQTT, spool, metricas de cadena
-python .\main.py --roots $visitas --objetivo 3
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 3
 
 # Objetivo 4: resiliencia, MTTR, PLR, estabilidad del gateway
-python .\main.py --roots $visitas --objetivo 4
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 4
 ```
 
 El parametro `--objetivo` afecta:

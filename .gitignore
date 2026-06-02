@@ -214,3 +214,44 @@ FincaDiag.py
 # Compressed / transfer artifacts
 *.tar.gz
 *.zip
+
+# Scripts de depuracion SSH / Pi (temporales de sesiones de trabajo)
+pi_*.py
+pi_*.txt
+pi_*.json
+ssh_obj4_*.py
+ssh_restore_*.py
+tmp_*.ps1
+tmp_*.sh
+
+# Scripts de corridas temporales en raiz
+run_suite_*.py
+run_tests_*.py
+scan_*.py
+verify_scheduler.py
+resilience_isolated.sh
+validate_schema_fixed.sh
+
+# Resultados y logs de pruebas (no son codigo)
+*_results.json
+*_results_*.json
+*_log.txt
+resultados_suite_*.json
+test_results_*.json
+consolidado_*.json
+gateway_test_*.json
+pi_test_*.json
+pi_test_*.txt
+*_output.txt
+
+# Archivos Pi que viven en la Raspberry, no en el repo
+FincaScheduler_pi.py
+FincaScheduler_pi_obj4.py
+
+# Snippets LaTeX de trabajo (van en el documento, no en el repo)
+snippet_*.tex
+Chapter_*_work.tex
+Chapter_*_actualizado.tex
+
+# Resultados Excel
+RESULTADOS_*.xlsx
