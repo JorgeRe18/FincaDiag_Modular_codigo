@@ -274,3 +274,6 @@ gateway_test_suite.py
 
 # Documentacion interna de trabajo
 docs/
+
+# Scripts de utilidad internos
+scripts/

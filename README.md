@@ -28,7 +28,6 @@ FincaDiag_Modular/
 │  └─ tests/            ← scripts de prueba y validación Obj4
 │     ├─ obj4_resilience_staged.py  ← experimento principal de resiliencia
 │     └─ *.sh / *.bat   ← auxiliares de validación y soak
-├─ scripts/             ← utilidades post-proceso (análisis, Excel, TikZ, informes)
 ├─ probe_forense/       ← versiones de referencia de FincaDiag.py y FincaScheduler.py
 │                         que corren en la Pi (solo lectura, no se modifican aquí)
 ├─ data/                ← capturas raw y datos procesados  [no versionado]
@@ -331,7 +330,7 @@ Si ya existen los `summary.json` procesados, se pueden regenerar los informes
 sin volver a ejecutar el motor completo:
 
 ```powershell
-python .\scripts\regenerar_informes_obj.py --objetivo 4 --run-name "Etapa_Obj4"
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 4 --run-name "Etapa_Obj4"
 ```
 
 Esto reescribe los `.txt` de sesion y actualiza el resumen ejecutivo global
