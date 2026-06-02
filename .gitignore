@@ -210,6 +210,8 @@ run_15_16_on_pi.py
 exec_15_16_production*.py
 deploy_and_run_raspberry.ps1
 FincaDiag.py
+!probe_forense/FincaDiag.py
+!probe_forense/FincaScheduler.py
 
 # Compressed / transfer artifacts
 *.tar.gz
@@ -279,7 +281,6 @@ docs/
 scripts/
 
 # Carpetas internas del proyecto
-probe_forense/
 data/
 Gateway/export/
 Gateway/tests/*.sh
