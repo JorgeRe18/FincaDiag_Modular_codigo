@@ -445,3 +445,103 @@ python -m streamlit run .\src\fincadiag\dashboard\app.py
 ```
 
 El dashboard solo visualiza resultados ya procesados por el motor — no ejecuta análisis.
+
+---
+
+## Generación de informes por objetivo
+
+El motor puede generar informes orientados al objetivo del TFG que se esté documentando.
+Esto no cambia la evidencia procesada; cambia el enfoque del reporte, los títulos y la
+lectura ejecutiva de los hallazgos.
+
+```powershell
+# Objetivo 1: caracterización, baseline, serial, PCAP, correlación y alertas
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 1
+
+# Objetivo 3: gateway perimetral, publicación MQTT/TLS y cadena de datos
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 3
+
+# Objetivo 4: resiliencia, MTTR, PLR y estabilidad operativa del gateway
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 4
+```
+
+El parámetro `--objetivo` afecta:
+
+- el texto de los informes técnicos y human-readable
+- el resumen ejecutivo global
+- las etiquetas de hallazgos priorizados
+- el nombre del directorio del lote, por ejemplo `Etapa_Obj3` o `Etapa_Obj4`
+
+Si ya existen los `summary.json` procesados, se pueden regenerar informes sin repetir
+todo el análisis:
+
+```powershell
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 4 --run-name "Etapa_Obj4"
+```
+
+## Pruebas de resiliencia — Objetivo 4
+
+El Objetivo 4 se evalúa sobre el gateway perimetral en la Raspberry Pi. Las pruebas
+miden recuperación y estabilidad bajo condiciones controladas: caída de broker, pérdida
+de red, terminación del proceso y ejecución prolongada.
+
+### Cronograma automático en Raspberry Pi
+
+| Hora | Evento | Tipo | Duración |
+|------|--------|------|----------|
+| 02:50, 05:00, 07:50, 10:38, 13:28, 15:36, 18:14, 21:03, 23:52 | `--all --cycles 7` | Resiliencia: broker, network, kill | ~25 min |
+| 08:15, 16:05 | `--scenario soak` | Soak: memoria RSS y CPU del gateway | 60 min |
+
+`--cycles 7` ejecuta siete ciclos consecutivos por escenario. En una jornada completa
+produce 189 filas de resiliencia, útiles para calcular PLR, MTTR y estabilidad de
+recuperación.
+
+### Scripts de gestión desde Windows
+
+| Script | Función |
+|--------|---------|
+| `install_obj4_cron.py` | Sube el experimento a la Raspberry Pi e instala/actualiza el cron de pruebas |
+| `run_obj4_all_now.py` | Ejecuta manualmente una corrida `--all` en la Raspberry Pi y muestra el CSV del día |
+| `diag_obj4_pi.py` | Diagnóstico remoto read-only: cron, procesos activos y últimos resultados |
+| `normality_tests.py` | Aplica Shapiro-Wilk sobre métricas acumuladas para apoyar el análisis estadístico |
+
+### Resultados esperados en la Raspberry Pi
+
+```text
+/home/esmeralda/resultados_obj4/
+  20260601/
+    obj4_resilience_results_20260601.csv
+    obj4_soak_results_20260601.csv
+    obj4_resilience_20260601.log
+    obj4_soak_20260601.log
+```
+
+### Ejecución manual de referencia
+
+```bash
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --dry-run
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --all --cycles 5
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --scenario broker
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --scenario soak --soak-minutes 60
+```
+
+## Análisis estadístico del Objetivo 4
+
+Cuando las pruebas automáticas acumulan suficientes datos, `normality_tests.py` aplica
+Shapiro-Wilk sobre las métricas principales para decidir si el análisis comparativo debe
+usar una prueba paramétrica o no paramétrica.
+
+```powershell
+python .\normality_tests.py
+```
+
+Métricas consideradas:
+
+| Métrica | Descripción |
+|---------|-------------|
+| `eta` | Eficiencia de extracción antes y después de la intervención |
+| `PLR` | Packet Loss Rate por escenario de resiliencia |
+| `MTTR` | Mean Time To Recovery del gateway |
+
+El resultado se guarda en `normality_results.json` y sirve como respaldo para el
+capítulo de validación.
