@@ -269,7 +269,6 @@ idempotency_isolated.sh
 tmp_idemp.sh
 generar_excel_backup.py
 run_obj4_today.py
-normality_tests.py
 sensitivity_window.py
 gateway_test_suite.py
 

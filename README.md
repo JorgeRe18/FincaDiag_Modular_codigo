@@ -328,3 +328,47 @@ python .\scripts\regenerar_informes_obj.py --objetivo 4 --run-name "Etapa_Obj4"
 
 Esto reescribe los `.txt` de sesion y actualiza el resumen ejecutivo global
 para reflejar el objetivo seleccionado.
+
+---
+
+## Analisis estadistico de resultados Objetivo 4
+
+Una vez que las pruebas automaticas han acumulado datos suficientes (n ≥ 30 por escenario),
+`normality_tests.py` aplica **Shapiro-Wilk** sobre las tres metricas de resiliencia para
+determinar si usar test parametrico (t-Student) o no parametrico (Mann-Whitney U) en el
+analisis comparativo del Capitulo 6.
+
+### Uso
+
+```powershell
+python .\normality_tests.py
+```
+
+### Que analiza
+
+| Metrica | Descripcion |
+|---------|-------------|
+| **η (eta)** | Eficiencia de extraccion — sesiones PRE vs POST intervencion |
+| **PLR** | Packet Loss Rate por escenario (broker / network / kill) |
+| **MTTR** | Mean Time To Recovery — distribucion de la muestra unica |
+
+### Salida
+
+```
+PRUEBAS DE NORMALIDAD (Shapiro-Wilk) - OBJETIVO 4
+--- 1. Eficiencia de extraccion (eta) ---
+  eta PRE : W=0.94 p=0.312 -> NORMAL
+  eta POST: W=0.89 p=0.041 -> NO NORMAL
+  RECOMENDACION: Mann-Whitney U (al menos una distribucion no normal)
+
+--- 2. Packet Loss Rate (PLR) ---
+  ...
+
+--- 3. Mean Time To Recovery (MTTR) ---
+  ...
+
+Resultados guardados en normality_results.json
+```
+
+Lee los CSV de la Pi desde `resultados_obj4/YYYYMMDD/obj4_resilience_results_*.csv`
+y guarda el resumen en `normality_results.json` para incluir en el informe.
