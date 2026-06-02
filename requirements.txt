@@ -1,0 +1,7 @@
+pandas
+plotly
+scapy
+streamlit
+statsmodels
+rich
+paho-mqtt
