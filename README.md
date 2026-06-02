@@ -25,11 +25,9 @@ FincaDiag_Modular/
 │  ├─ ingest/           ← descubrimiento de sesiones
 │  └─ cli.py            ← interfaz de línea de comandos
 ├─ Gateway/             ← código operativo del gateway en la Raspberry Pi
-│  └─ tests/            ← scripts de prueba y validación Obj4
-│     ├─ obj4_resilience_staged.py  ← experimento principal de resiliencia
-│     └─ *.sh / *.bat   ← auxiliares de validación y soak
-├─ probe_forense/       ← versiones de referencia de FincaDiag.py y FincaScheduler.py
-│                         que corren en la Pi (solo lectura, no se modifican aquí)
+│  ├─ run_gateway.sh / run_gateway.bat  ← arranque del daemon en la Pi
+│  └─ tests/
+│     └─ obj4_resilience_staged.py  ← experimento de resiliencia Obj4
 ├─ data/                ← capturas raw y datos procesados  [no versionado]
 ├─ reports/             ← informes generados               [no versionado]
 ├─ main.py              ← punto de entrada del motor

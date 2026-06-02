@@ -277,3 +277,16 @@ docs/
 
 # Scripts de utilidad internos
 scripts/
+
+# Carpetas internas del proyecto
+probe_forense/
+data/
+Gateway/export/
+Gateway/tests/*.sh
+Gateway/tests/*.bat
+Gateway/tests/README.md
+Gateway/*.bat
+Gateway/*.ps1
+Gateway/run_dryrun*
+Gateway/offline_smoke*
+Gateway/test_spool*
