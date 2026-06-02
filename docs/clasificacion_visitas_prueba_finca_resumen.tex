@@ -1,0 +1,55 @@
+% Requiere en el preambulo:
+% \usepackage{array}
+% \usepackage{tabularx}
+%
+% Uso sugerido:
+% \input{docs/clasificacion_visitas_prueba_finca_resumen.tex}
+
+\subsection{Resumen ejecutivo de las visitas}
+
+Para facilitar la lectura del conjunto \texttt{Prueba\_Finca}, las visitas se
+agruparon por fase de madurez de captura y por uso principal dentro del
+proyecto. Esta sintesis permite distinguir rapidamente que subconjunto resulta
+mas util para exploracion de protocolo, cual funciona como patron operativo y
+cuales visitas conviene priorizar para validar el motor nuevo.
+
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{|p{2.8cm}|p{3.2cm}|p{4.0cm}|p{2.4cm}|X|}
+\hline
+\textbf{Grupo} & \textbf{Rango / visitas} & \textbf{Uso principal} & \textbf{Prioridad} & \textbf{Lectura recomendada} \\
+\hline
+Exploratoria serial & 23/02 a 12/03 & Descubrimiento de protocolo, fragmentacion y patrones tempranos del bus serial & Media-Alta & Util para entender el canal serial, pero no para correlacion fuerte con red. \\
+\hline
+Transicion operativa & 14/03 a 19/03 & Robustez del parser con mezcla parcial de serial y antena & Alta & Buen subconjunto para probar tolerancia a artefactos heterogeneos y cobertura incompleta. \\
+\hline
+Red madura & 20/03 a 30/03 & Comparacion longitudinal, baseline, antena y PCAP & Alta & Es la base mas estable para reportes globales, dashboards y lectura por visita. \\
+\hline
+Casos ricos / incidencia & 31/03 y 04/04 & Anomalias de red, degradacion baseline y casos mixtos & Muy alta & Conviene priorizarlas para discutir impacto de red sobre la evidencia. \\
+\hline
+Visita patron & 01/04 & Referencia de estructura regular del sistema & Muy alta & Es la mejor visita para explicar el funcionamiento normal del esquema de captura. \\
+\hline
+Protocolo serial variable & 02/04 & Variantes raras del serial y modos distintos del bus & Muy alta & Es la mejor candidata para refinar clasificacion y reglas del parser serial. \\
+\hline
+Motor operativo nuevo & 03/04 & Reconstruccion de eventos de vaca y asignacion de flujo & Muy alta & Es la mejor visita para ajustar la maquina de estados del motor operativo. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\paragraph{Sintesis.}
+En terminos practicos, febrero e inicios de marzo corresponden a una fase
+exploratoria del serial; mitad de marzo representa una etapa de transicion;
+desde el 20 de marzo de 2026 comienza la fase madura de captura con mayor valor
+para analisis de red; y el bloque 31/03--04/04 concentra las visitas mas utiles
+para discutir validacion operativa, anomalias y refinamiento del motor.
+
+\paragraph{Seleccion recomendada para el TFG.}
+\begin{itemize}
+\item \texttt{Visita\_01\_04\_2026}: ejemplo de visita patron.
+\item \texttt{Visita\_02\_04\_2026}: refinamiento del protocolo serial.
+\item \texttt{Visita\_03\_04\_2026}: ajuste del motor de eventos de vaca.
+\item \texttt{Visita\_31\_03\_2026} y \texttt{Visita\_04\_04\_2026}: casos con incidencia de red.
+\item Tramo \texttt{20/03/2026 -- 30/03/2026}: apoyo para comparacion longitudinal.
+\end{itemize}
