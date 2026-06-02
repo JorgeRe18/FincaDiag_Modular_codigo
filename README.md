@@ -16,19 +16,29 @@ Capacidades principales:
 
 ```text
 FincaDiag_Modular/
-├─ src/fincadiag/        ← motor analítico (parsers, analysis, export, gateway, dashboard)
-├─ Gateway/             ← código del gateway MQTT/TLS y pruebas de resiliencia Obj4
-│  └─ tests/
-│     └─ obj4_resilience_staged.py
-├─ scripts/             ← utilidades de análisis y generación de reportes
-├─ docs/                ← documentación interna
-├─ data/                ← capturas raw y datos procesados (no versionados)
-├─ reports/             ← informes generados (no versionados)
+├─ src/fincadiag/        ← motor analítico
+│  ├─ parsers/          ← serial, PCAP, baseline, antena UDP
+│  ├─ analysis/         ← correlación, alertas, métricas, validación de campo
+│  ├─ export/           ← generador de informes (report_builder)
+│  ├─ gateway/          ← publicador MQTT/TLS, runtime, normalizer
+│  ├─ dashboard/        ← Aletheia Board (Streamlit)
+│  ├─ ingest/           ← descubrimiento de sesiones
+│  └─ cli.py            ← interfaz de línea de comandos
+├─ Gateway/             ← código operativo del gateway en la Raspberry Pi
+│  └─ tests/            ← scripts de prueba y validación Obj4
+│     ├─ obj4_resilience_staged.py  ← experimento principal de resiliencia
+│     └─ *.sh / *.bat   ← auxiliares de validación y soak
+├─ scripts/             ← utilidades post-proceso (análisis, Excel, TikZ, informes)
+├─ probe_forense/       ← versiones de referencia de FincaDiag.py y FincaScheduler.py
+│                         que corren en la Pi (solo lectura, no se modifican aquí)
+├─ data/                ← capturas raw y datos procesados  [no versionado]
+├─ reports/             ← informes generados               [no versionado]
 ├─ main.py              ← punto de entrada del motor
 ├─ requirements.txt
-├─ install_obj4_cron.py ← gestión del cron de Obj4 en la Raspberry Pi
-├─ run_obj4_all_now.py  ← ejecución manual de Obj4 vía SSH
-└─ diag_obj4_pi.py      ← diagnóstico remoto de la Pi
+├─ normality_tests.py   ← pruebas Shapiro-Wilk sobre resultados Obj4 (Cap 6)
+├─ install_obj4_cron.py ← sube script a Pi e instala cron de 9 ventanas diarias
+├─ run_obj4_all_now.py  ← corre --all manualmente en Pi y muestra CSV del día
+└─ diag_obj4_pi.py      ← diagnóstico remoto read-only de la Pi
 ```
 
 ## Flujo recomendado
