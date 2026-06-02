@@ -8,8 +8,12 @@ import os
 import paramiko
 from pathlib import Path
 
-SCRIPT_LOCAL = Path(r"C:\Users\jorge\OneDrive\Documentos\FincaDiag_Modular\Gateway\tests\obj4_resilience_staged.py")
+BASE_DIR = Path(__file__).resolve().parent
+SCRIPT_LOCAL = BASE_DIR / "Gateway" / "tests" / "obj4_resilience_staged.py"
 SCRIPT_REMOTE = "/home/esmeralda/obj4_resilience_staged.py"
+PI_HOST = os.environ["PI_HOST"]
+PI_PORT = int(os.environ.get("PI_PORT", "22"))
+PI_USER = os.environ.get("PI_USER", "esmeralda")
 
 CMD_ALL  = ("/usr/bin/python3 /home/esmeralda/obj4_resilience_staged.py --all --cycles 7 "
             ">> /home/esmeralda/resultados_obj4/cron_obj4.log 2>&1")
@@ -35,8 +39,8 @@ CRON_LINES.append(f"5 16 * * * {CMD_SOAK}")   # soak 2: 16:05-17:05 (tras --all 
 
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("gateway-esmeralda-ssh.at.remote.it", port=33000,
-          username="esmeralda", password=os.environ["PI_PASSWORD"], timeout=30)
+c.connect(PI_HOST, port=PI_PORT,
+          username=PI_USER, password=os.environ["PI_PASSWORD"], timeout=30)
 
 
 def run(cmd, timeout=30):

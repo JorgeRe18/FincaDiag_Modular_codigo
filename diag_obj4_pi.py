@@ -3,10 +3,14 @@
 import os
 import paramiko
 
+PI_HOST = os.environ["PI_HOST"]
+PI_PORT = int(os.environ.get("PI_PORT", "22"))
+PI_USER = os.environ.get("PI_USER", "esmeralda")
+
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("gateway-esmeralda-ssh.at.remote.it", port=33000,
-          username="esmeralda", password=os.environ["PI_PASSWORD"], timeout=30)
+c.connect(PI_HOST, port=PI_PORT,
+          username=PI_USER, password=os.environ["PI_PASSWORD"], timeout=30)
 
 cmds = [
     ("Fecha/hora Pi", "date"),

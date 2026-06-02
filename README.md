@@ -505,6 +505,16 @@ recuperación.
 | `diag_obj4_pi.py` | Diagnóstico remoto read-only: cron, procesos activos y últimos resultados |
 | `normality_tests.py` | Aplica Shapiro-Wilk sobre métricas acumuladas para apoyar el análisis estadístico |
 
+Antes de usar los scripts remotos, define las credenciales de la Raspberry Pi como
+variables de entorno:
+
+```powershell
+$env:PI_HOST="<host_o_ip_de_la_raspberry>"
+$env:PI_PORT="22"
+$env:PI_USER="esmeralda"
+$env:PI_PASSWORD="<password>"
+```
+
 ### Resultados esperados en la Raspberry Pi
 
 ```text

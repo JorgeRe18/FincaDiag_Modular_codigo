@@ -11,12 +11,13 @@ Si p >= 0.05 -> no rechaza normalidad -> puede usarse t-test.
 Salida: tabla resumen + recomendacion automatica de contraste estadistico.
 """
 import json
+import os
 from pathlib import Path
 import numpy as np
 from scipy import stats
 import pandas as pd
 
-BASE = Path(r'C:\Users\jorge\OneDrive\Documentos\FincaDiag_Modular')
+BASE = Path(os.environ.get("FINCADIAG_BASE", Path(__file__).resolve().parent))
 PROCESSED = BASE / 'data' / 'processed' / 'visits'
 POST_START = (2026, 5, 11)
 
