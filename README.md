@@ -294,8 +294,6 @@ Scripts en la raiz del repo para administrar las pruebas sin entrar a la Pi:
 | `run_obj4_all_now.py` | Corre `--all` manualmente en la Pi y muestra el CSV del dia |
 | `diag_obj4_pi.py` | Diagnostico read-only: verifica cron, procesos activos y ultimos resultados |
 
-Requiere la variable de entorno `PI_PASSWORD` para conexion SSH via paramiko.
-
 ### Argumentos del script de resiliencia (en la Pi)
 
 ```bash
