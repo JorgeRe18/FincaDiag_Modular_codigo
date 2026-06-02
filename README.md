@@ -12,6 +12,13 @@ Capacidades principales:
 - Publicación normalizada vía gateway MQTT/TLS (Objetivo 3)
 - Pruebas de resiliencia del gateway en producción (Objetivo 4)
 
+Componentes del ecosistema:
+
+- **Aletheia**: motor de análisis forense y normalización de evidencia.
+- **Probe Forense**: instrumento de captura pasiva que corre en Raspberry Pi 5.
+- **Aletheia Board**: dashboard Streamlit para visualizar resultados procesados.
+- **Gateway perimetral**: publicador MQTT/TLS con store-and-forward.
+
 ## Estructura
 
 ```text
