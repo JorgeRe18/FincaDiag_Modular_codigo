@@ -1,8 +1,8 @@
 # FincaDiag Modular
 
-Motor de análisis modular desarrollado como parte de un TFG de ingeniería en ciberseguridad. Procesa capturas de campo de una finca ganadera y genera informes técnicos y ejecutivos por sesión y por lote de visitas, cubriendo los tres objetivos del proyecto.
+Motor de análisis modular para el sistema FincaDiag (TFG). Procesa capturas de campo de una finca ganadera y genera informes técnicos y ejecutivos por sesión y por lote de visitas.
 
-**Capacidades principales:**
+Capacidades principales:
 
 - Baseline de red (ARP, topología, top talkers)
 - Telemetría serial (collares SCR, eventos por vaca, confianza del parser)
@@ -38,11 +38,11 @@ FincaDiag_Modular/
 └─ diag_obj4_pi.py      ← diagnóstico remoto read-only de la Pi
 ```
 
-## Flujo de uso
+## Flujo recomendado
 
-No es necesario copiar los archivos a mano si ya están organizados por visita, toma y hora. El motor detecta la estructura automáticamente.
+No necesitas copiar tus logs a mano si ya los tienes organizados por visita, toma y hora.
 
-Hay tres modos de operación:
+El motor puede trabajar de dos formas:
 
 1. `--sample`
    Procesa una sola carpeta `Captura_*` y le asocia el `Baseline_*` más cercano.
@@ -95,7 +95,7 @@ python .\main.py --roots `
   --run-name "Lote_4_visitas"
 ```
 
-También puedes armar la lista en PowerShell:
+Si prefieres, también puedes armar la lista en PowerShell:
 
 ```powershell
 $visitas = @(
@@ -108,7 +108,7 @@ $visitas = @(
 python .\main.py --roots $visitas --run-name "Lote_4_visitas"
 ```
 
-El motor trata cada `Captura_*` como una sesión analítica y busca el `Baseline_*`
+El sistema tratará cada `Captura_*` como una sesión analítica y buscará el `Baseline_*`
 más cercano dentro de la misma rama de carpetas.
 
 Si existen dos baselines alrededor de una captura, el sistema detecta:
@@ -126,21 +126,24 @@ Si la raíz que pasas corresponde a una visita, por ejemplo:
 python .\main.py --root "C:\PROYECTO_TFG\Prueba_Finca\Visita_24_03_2026"
 ```
 
-Se procesarán todas las tomas de esa visita y además se generará un resumen consolidado.
+se procesarán todas las tomas de esa visita y además se generará un resumen consolidado por visita.
 
-Casos de campo soportados:
+También soporta estos casos reales:
 
 - `Captura_*` con solo `serial_hex.txt`
 - `Captura_*` con solo `captura.pcap` o `captura.pcapng`
 - `Captura_*` con ambos archivos
-- Cualquier carpeta `Baseline_*`, incluso dentro de visitas mixtas, se registra como sesión `baseline-only`
-- `Captura_*` que ya incluye `reporte.txt`, `arp_a.txt`, `ipconfig_all.txt` y `route_print.txt`
+- cualquier carpeta `Baseline_*`, incluso dentro de visitas mixtas, se registra también como sesión `baseline-only`
+- `Captura_*` que ya trae `reporte.txt`, `arp_a.txt`, `ipconfig_all.txt` y `route_print.txt`
+  dentro de la propia carpeta
 
-La correlación solo se ejecuta cuando una sesión tiene datos serial y PCAP al mismo tiempo.
+La correlación solo se ejecuta cuando una sesión tiene serial y PCAP al mismo tiempo.
 
 ### Salidas
 
-Los resultados se organizan por visita y por sesión, sin mezclar todo en una sola carpeta:
+Las salidas ya no quedan mezcladas en una sola carpeta plana.
+
+Ahora se organizan así:
 
 ```text
 data/
@@ -173,12 +176,15 @@ reports/
 
 En resumen:
 
-- Cada visita tiene su propia carpeta con informes por sesión (`por_hora`) y un consolidado (`resumen`)
-- Al procesar un árbol grande, se genera además un resumen global del árbol completo
-- Al usar `--roots`, se genera un consolidado global exclusivo del lote seleccionado
-- Cada sesión guarda `alerts.json` y `alerts.csv` con alertas por capa: `baseline`, `serial`, `pcap_general`, `telemetry_6001` y `correlation`
-- El resumen global distingue entre tipos de muestra: `SERIAL + PCAP`, `Antena + PCAP`, `PCAP`, `Baseline`
-- El resumen global incluye un bloque de alertas en lenguaje accesible para lectores no técnicos
+- cada visita tiene su propia carpeta
+- cada visita tiene una carpeta `por_hora` con los informes por sesión
+- cada visita tiene una carpeta `resumen` con el consolidado de la visita
+- si procesas un árbol grande con varias visitas, también se genera un resumen global del árbol
+- si procesas varias visitas específicas con `--roots`, se genera un consolidado global propio del lote
+- cada sesión guarda `alerts.json` y `alerts.csv` con alertas de `baseline`, `serial`, `pcap_general`, `telemetry_6001` y `correlation`
+- el resumen global y el resumen por visita incluyen control por tipo de muestra:
+  `SERIAL + PCAP`, `Antena + PCAP`, `PCAP`, `Baseline`
+- el resumen global incluye un bloque de alertas PCAP en lenguaje simple para lector no técnico
 
 Cuando usas `--roots` con `--run-name`, el consolidado del lote queda separado así:
 
@@ -213,41 +219,58 @@ python -m streamlit run .\src\fincadiag\dashboard\app.py
 pip install -r .\requirements.txt
 ```
 
-## Filosofía de diseño
+## Filosofía
 
-- El motor analítico vive separado del dashboard: puede usarse sin interfaz gráfica.
-- El dashboard solo visualiza resultados ya procesados, no ejecuta análisis.
-- Cada módulo es reemplazable sin afectar el resto.
+- El motor analítico vive fuera del dashboard.
+- El dashboard solo visualiza resultados.
+- Cada módulo puede cambiarse sin reescribir el resto.
 
 ## Distinción de capas de red
 
-El motor diferencia dos tipos de análisis sobre el PCAP:
+El motor separa explícitamente dos tipos de análisis sobre PCAP:
 
-1. `general` — tráfico LAN completo: multicast, broadcast, volumen total, top talkers
-2. `telemetry` — canal de telemetría filtrado por IP, puerto y firma `56 D1 00`
+1. `general`
+   - tráfico LAN completo
+   - multicast
+   - broadcast
+   - volumen total
+   - top talkers
 
-La correlación serial ↔ red se ejecuta contra la capa `telemetry`, no contra el PCAP general.
+2. `telemetry`
+   - tráfico del canal de antena/telemetría
+   - filtrado por IP objetivo y puerto objetivo
+   - firma `56 D1 00`
+   - eventos UDP y TCP del canal
+
+La correlación serial <-> red se realiza contra la capa `telemetry`, no contra todo el
+PCAP general.
 
 ---
 
-## Pruebas de Resiliencia — Objetivo 4 (Raspberry Pi)
+## Pruebas de Resiliencia - Objetivo 4 (Raspberry Pi)
 
-Las pruebas de resiliencia corren automáticamente en la Raspberry Pi mediante cron, sincronizadas con los bloques de captura activa del FincaScheduler. Esto garantiza que las métricas MTTR, PLR y estabilidad de memoria/CPU se miden **bajo carga real**.
+El sistema ejecuta pruebas automáticas de resiliencia del gateway en la Raspberry Pi,
+programadas en el crontab de `root`. Esto garantiza que las métricas MTTR, PLR y
+estabilidad de memoria/CPU se miden **bajo carga real** (durante los bloques de captura
+activa del FincaScheduler).
 
-### Cronograma diario
+### Cronograma diario automático
 
-| Hora | Evento | Tipo | Duracion |
+| Hora | Evento | Tipo | Duración |
 |------|--------|------|----------|
 | 02:50, 05:00, 07:50, 10:38, 13:28, 15:36, 18:14, 21:03, 23:52 | `--all --cycles 7` | **Resiliencia** (broker, network, kill) | ~25 min |
 | 08:15, 16:05 | `--scenario soak` | **Soak** (RSS/CPU del gateway) | 60 min |
 
-Cada corrida de `--all` ejecuta 7 ciclos de los tres escenarios, generando **189 filas por día**.
+**`--cycles 7`** ejecuta 7 ciclos consecutivos de cada escenario por corrida, lo que
+produce **189 filas de resiliencia al día** (27 escenarios × 7 ciclos).
 
-El soak test muestrea la memoria RSS y el CPU del proceso `fincadiag-gateway` cada 30 segundos. Falla si el crecimiento de memoria supera el 20% o el CPU promedio supera el 80%.
+**Soak test** muestrea la memoria RSS y el uso de CPU del proceso `fincadiag-gateway`
+cada 30 segundos. Falla si el crecimiento de memoria supera 20% o el promedio de CPU
+supera 80%.
 
 ### Resultados
 
-Los resultados se almacenan en subcarpetas por día en la Pi:
+Los resultados se organizan en subcarpetas por día dentro de la Pi:
 
 ```text
 /home/esmeralda/resultados_obj4/
@@ -258,58 +281,99 @@ Los resultados se almacenan en subcarpetas por día en la Pi:
     obj4_soak_20260601.log
 ```
 
-### Gestión desde Windows
+### Gestión desde Windows (repo local)
 
-Desde la raíz del repositorio se puede administrar la Pi sin conectarse manualmente:
+Scripts en la raíz del repo para administrar las pruebas sin entrar a la Pi:
 
 | Script | Función |
 |--------|---------|
-| `install_obj4_cron.py` | Sube el script a la Pi e instala o actualiza el crontab |
-| `run_obj4_all_now.py` | Lanza `--all` manualmente en la Pi y muestra el CSV del día |
-| `diag_obj4_pi.py` | Diagnóstico remoto: verifica cron, procesos activos y últimos resultados |
+| `install_obj4_cron.py` | Sube `obj4_resilience_staged.py` e instala/actualiza el crontab de root en la Pi |
+| `run_obj4_all_now.py` | Corre `--all` manualmente en la Pi y muestra el CSV del día |
+| `diag_obj4_pi.py` | Diagnóstico read-only: verifica cron, procesos activos y ultimos resultados |
 
-### Uso directo del script en la Pi
+### Argumentos del script de resiliencia (en la Pi)
 
 ```bash
-sudo python3 /home/esmeralda/obj4_resilience_staged.py --dry-run
-sudo python3 /home/esmeralda/obj4_resilience_staged.py --all --cycles 7
-sudo python3 /home/esmeralda/obj4_resilience_staged.py --scenario broker
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --dry-run        # verificacion sin tocar nada
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --all --cycles 5   # broker+network+kill, 5 ciclos
+sudo python3 /home/esmeralda/obj4_resilience_staged.py --scenario broker  # solo broker, 1 ciclo
 sudo python3 /home/esmeralda/obj4_resilience_staged.py --scenario soak --soak-minutes 60
 ```
 
 ---
 
-## Generación de informes por objetivo
+## Generación de informes por Objetivo
 
-El motor puede orientar el contenido de los informes según el objetivo del TFG:
+El motor soporta generar informes orientados al objetivo del TFG seleccionado:
 
 ```powershell
-# Objetivo 1 (por defecto): baseline, serial, PCAP, correlación, alertas
+# Objetivo 1 (default): baseline, serial, pcap, correlacion, alertas
 python .\main.py --root "C:\ruta\a\visitas" --objetivo 1
 
-# Objetivo 3: gateway, publicación MQTT, spool, métricas de cadena
+# Objetivo 3: gateway, publicacion MQTT, spool, metricas de cadena
 python .\main.py --root "C:\ruta\a\visitas" --objetivo 3
 
 # Objetivo 4: resiliencia, MTTR, PLR, estabilidad del gateway
 python .\main.py --root "C:\ruta\a\visitas" --objetivo 4
 ```
 
-El parámetro `--objetivo` ajusta el framing de los informes técnicos, el resumen ejecutivo y el nombre del directorio de salida (por ejemplo, `Etapa_Obj4`).
+El parámetro `--objetivo` afecta:
+- El texto de los informes técnicos y human-readable (framing, titulos, secciones)
+- El resumen ejecutivo global (etiquetas y hallazgos priorizados)
+- El nombre del directorio del lote (ej. `Etapa_Obj3`, `Etapa_Obj4`)
+
+### Regenerar informes sin reprocesar datos
+
+Si ya existen los `summary.json` procesados, se pueden regenerar los informes
+sin volver a ejecutar el motor completo:
+
+```powershell
+python .\main.py --root "C:\ruta\a\visitas" --objetivo 4 --run-name "Etapa_Obj4"
+```
+
+Esto reescribe los `.txt` de sesion y actualiza el resumen ejecutivo global
+para reflejar el objetivo seleccionado.
 
 ---
 
-## Análisis estadístico de resultados — Objetivo 4
+## Análisis estadístico de resultados Objetivo 4
 
-Cuando las pruebas automáticas han acumulado suficientes datos (n ≥ 30 por escenario), `normality_tests.py` aplica **Shapiro-Wilk** sobre las tres métricas de resiliencia para determinar si corresponde usar una prueba paramétrica (t de Student) o no paramétrica (Mann-Whitney U) en el análisis comparativo.
+Una vez que las pruebas automáticas han acumulado datos suficientes (n ≥ 30 por escenario),
+`normality_tests.py` aplica **Shapiro-Wilk** sobre las tres métricas de resiliencia para
+determinar si usar test paramétrico (t-Student) o no paramétrico (Mann-Whitney U) en el
+análisis comparativo del Capítulo 6.
+
+### Uso
 
 ```powershell
 python .\normality_tests.py
 ```
 
+### Qué analiza
+
 | Métrica | Descripción |
 |---------|-------------|
 | **η (eta)** | Eficiencia de extracción — sesiones PRE vs POST intervención |
 | **PLR** | Packet Loss Rate por escenario (broker / network / kill) |
-| **MTTR** | Mean Time To Recovery — distribución de la muestra |
+| **MTTR** | Mean Time To Recovery — distribución de la muestra única |
 
-El script lee los CSV desde `resultados_obj4/YYYYMMDD/` en la Pi y guarda el resumen en `normality_results.json`.
+### Salida
+
+```
+PRUEBAS DE NORMALIDAD (Shapiro-Wilk) - OBJETIVO 4
+--- 1. Eficiencia de extraccion (eta) ---
+  eta PRE : W=0.94 p=0.312 -> NORMAL
+  eta POST: W=0.89 p=0.041 -> NO NORMAL
+  RECOMENDACION: Mann-Whitney U (al menos una distribucion no normal)
+
+--- 2. Packet Loss Rate (PLR) ---
+  ...
+
+--- 3. Mean Time To Recovery (MTTR) ---
+  ...
+
+Resultados guardados en normality_results.json
+```
+
+Lee los CSV de la Pi desde `resultados_obj4/YYYYMMDD/obj4_resilience_results_*.csv`
+y guarda el resumen en `normality_results.json` para incluir en el informe.
