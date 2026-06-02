@@ -1,4 +1,4 @@
-# FincaDiag Modular
+# FincaDiag Modular  -- Aletheia
 
 Motor de análisis modular para el sistema FincaDiag (TFG). Procesa capturas de campo de una finca ganadera y genera informes técnicos y ejecutivos por sesión y por lote de visitas.
 
