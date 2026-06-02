@@ -248,10 +248,22 @@ pi_test_*.txt
 FincaScheduler_pi.py
 FincaScheduler_pi_obj4.py
 
-# Snippets LaTeX de trabajo (van en el documento, no en el repo)
+# Archivos LaTeX de trabajo (van en el documento, no en el repo)
 snippet_*.tex
-Chapter_*_work.tex
-Chapter_*_actualizado.tex
+Chapter_*.tex
 
-# Resultados Excel
+# Resultados Excel y JSONs consolidados de datos
 RESULTADOS_*.xlsx
+consolidado_*.json
+gateway_test_*.json
+log_suite_*.txt
+
+# Scripts de analisis interno/temporal en raiz
+audit_resultados.py
+compute_plr.py
+count_all_sessions.py
+dedupe_sessions.py
+find_pi_pkg.py
+fix_scheduler_and_at.py
+idempotency_isolated.sh
+tmp_idemp.sh
