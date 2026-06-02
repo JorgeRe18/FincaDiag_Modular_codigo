@@ -272,3 +272,6 @@ run_obj4_today.py
 normality_tests.py
 sensitivity_window.py
 gateway_test_suite.py
+
+# Documentacion interna de trabajo
+docs/
